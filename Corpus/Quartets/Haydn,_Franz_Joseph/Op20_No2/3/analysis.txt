@@ -68,7 +68,7 @@ m72 iv6 b2 viio/iv b3 iv
 m73 iv/V
 m74 vi/V
 m75 V/V
-m76 V6 b2 vii/V b3 V
+m76 V6 b2 viio/V b3 V
 m77 V b3 III6
 m78 b3 V7
 m79 b3 i64

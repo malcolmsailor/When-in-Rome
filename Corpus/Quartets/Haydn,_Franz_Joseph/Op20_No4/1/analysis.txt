@@ -55,7 +55,7 @@ m64 b3 I6
 m65 V43 b3 I
 m66 ii6 b3.67 V7
 m67 I
-m68 vii/ii
+m68 viio/ii
 m69 b2 ii b3 IV
 m70 iii6 b3 V7
 m71 I

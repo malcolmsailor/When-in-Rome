@@ -43,7 +43,8 @@ m29 I || b3 vi
 m30 ii b2 viio6 b3 I
 Note: ascending bass line in mm31ff
 m31 V b2 V7 b3 vi
-m32 v6 b2 bVII7[maj7] b3 vii/o7
+Note: was "maj7" but music21 does not parse this. If music21 behavior is updated for "bVII7" then "#" should be removed.
+m32 v6 b2 bVII7[#7] b3 vii/o7
 m33 I || A: V b3 V6/vi
 m34 IV6 b2 V6/5 b3 I
 m35 V b1.5 V7 b2 vi b3 ii6/5

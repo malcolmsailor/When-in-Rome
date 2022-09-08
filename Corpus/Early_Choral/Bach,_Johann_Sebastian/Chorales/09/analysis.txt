@@ -15,7 +15,8 @@ Note: V2 resolves to root pos. I over descending scale
 m3 IV6 b1.5 vii/o7 b2 I b2.5 IV7 b3 V2 b4 I
 m4 V b2.5 V7 b3 I || b4 V
 Note: in m5, the suspension on b2 could resolve to I in G major.
-m5 V b2 a: viio6 b3 i b4 vii/o7/V
+Note: was vii/o7/V but music21 interprets this as a half-diminished chord
+m5 V b2 a: viio6 b3 i b4 viio7/V
 m6 V b2.5 V7 b3 i || b4 e: i b4.5 V4/3
 m7 i6 b2 V6/5/iv b3 iv b4 V6/5/V
 m8 V b2 V7 b3 i || b4 G: V

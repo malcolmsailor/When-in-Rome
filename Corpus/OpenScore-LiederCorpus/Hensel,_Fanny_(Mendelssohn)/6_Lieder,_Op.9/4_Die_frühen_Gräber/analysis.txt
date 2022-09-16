@@ -23,4 +23,7 @@ m16 vii06
 m17 I6 b4 Db: V65
 m18 ii65
 m19 I64 b4 V7
-m20 I
+Note: first/second endings are notated with same measure.
+m20a I :||
+m20b I :||
+m20c I

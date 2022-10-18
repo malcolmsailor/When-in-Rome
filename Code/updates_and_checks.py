@@ -34,6 +34,7 @@ import os
 import re
 import shutil
 
+from pathlib import PurePath
 from typing import Optional, Union
 
 import romanUmpire
@@ -107,6 +108,40 @@ def get_analyses(corpus: str = 'OpenScore-LiederCorpus',
     if all_versions:
         f = 'analysis*txt'
     return get_corpus_files(corpus=corpus, file_name=f)
+
+
+def clear_the_decks(corpus: str = '',
+                    fileTypeToStay = ['analysis.txt', 'analysis_automatic.rntxt', 'score.mxl'],
+                    fileTypeToGo: list = ['analysis_on_score.mxl', 'slices.tsv',],
+                    delete: bool = True
+                    ) -> list:
+    """
+    When in Rome now supports many variant subsidiary files 
+    but does not include them by default.
+    Having created them, use this to reset (delete).
+    
+    :param corpus:
+    :param fileTypeToStay: Which file types we definitely keep.
+    :param fileTypeToGo: Which file types that definitely go.
+    :param delete: Bool. Delete or just report by printing to log.
+    :return: files not accounted for the explicit lists of those to keep and those to remove.
+    """
+
+    miscellany = []
+    filesToGo = []
+    
+    for g in fileTypeToGo:
+        filesToGo += get_corpus_files(corpus=corpus, file_name=g)
+    
+    for f in filesToGo:
+        print('Removing: ', f)
+        if delete:
+            os.remove(f)
+            
+    for s in fileTypeToStay:
+        miscellany += get_corpus_files(corpus=corpus, file_name=g)
+    
+    return miscellany
 
 
 # ------------------------------------------------------------------------------
@@ -208,6 +243,52 @@ def process_corpus(corpus: str = 'OpenScore-LiederCorpus',
                                   feedback=feedback)
             except:
                 print(f'Error with: {pth}')
+
+
+# ------------------------------------------------------------------------------
+
+# Automated analyses from augmentednet
+
+def make_automated_analyses(corpus: str = 'OpenScore-LiederCorpus') -> None:
+    """
+    Create automated analyses using augmentednet (Nápoles López et al. 2021).
+    :param corpus: Which corpus (or all). See notes at `get_corpus_files`
+    :return: None
+
+    TODO: untested draft based on (adapted from) https://github.com/MarkGotham/When-in-Rome/pull/47
+    """
+
+    from AugmentedNet.inference import batch, predict
+    from AugmentedNet.utils import tensorflowGPUHack
+    from tensorflow import keras
+
+    tensorflowGPUHack()
+    modelPath = "AugmentedNet.hdf5"
+    model = keras.models.load_model(modelPath)
+
+    files = get_corpus_files(corpus=corpus,
+                             file_name='score.mxl')
+
+    for path in files:
+        pathrntxt = path.replace(".mxl", "_annotated.rntxt")
+        annotatedScore = path.replace(".mxl", "_annotated.xml")
+        annotationCSV = path.replace(".mxl", "_annotated.csv")
+        newrntxt = path.replace("score.mxl", "analysis_automatic.rntxt")
+        print(path)
+        if os.path.isfile(newrntxt):
+            print("... Already present, skipping.")
+            continue
+        try:
+            predict(model, inputPath=path)
+        except:
+            print("... Failure to predict, skipping.")
+            pass
+        if os.path.isfile(annotatedScore):
+            os.remove(annotatedScore)
+        if os.path.isfile(annotationCSV):
+            os.remove(annotationCSV)
+        if os.path.isfile(pathrntxt):
+            shutil.move(pathrntxt, newrntxt)
 
 
 # ------------------------------------------------------------------------------
@@ -352,46 +433,55 @@ def copy_DCML_tsv_analysis_files(in_path: Union[str, os.PathLike],
             working_path = os.path.join(mvt_path, 'Working')
             if not os.path.isdir(working_path):
                 os.mkdir(working_path)
+                
+            print(f"Processing {working_path} ...", end="", flush=True)
 
             shutil.copy(in_path + f,
-                        str(working_path) + '/DCML_analysis.tsv'
+                        os.path.join(working_path, 'DCML_analysis.tsv')
                         )
+            print(" done.")
 
 
-def convert_DCML_tsv_analyses(corpus: str = 'Quartets') -> None:
+def convert_DCML_tsv_analyses(corpus: str = 'Quartets',
+                              # overwrite: bool = True
+                              ) -> None:
     """
     Convert local copies of DCML's analysis files (.tsv) to rntxt.
     """
 
-    # TODO what are the possible values of 'corpus'?
-    genre_strs = {"Quartets": "String quartet"}
-    try:
-        genre_str = genre_strs[corpus]
-    except KeyError:
-        raise ValueError(
-            f"corpus='{corpus}', but must be in {set(genre_strs.keys())}"
-        )
     file_paths = get_corpus_files(corpus=corpus, file_name='DCML_analysis.tsv')
 
     for f in file_paths:
-        m = re.search(r"Op0*(?P<opus>\d+)(_No0?(?P<num>\d+))?/0*(?P<mvmt>\d+)", f)
-        work_str = (
-            f"{genre_str} Op. {m.group('opus')}" 
-            + ("" if m.group('num')is None else f" No. {m.group('num')}") 
-            + f", Movement {m.group('mvmt')}")
-        out_path = os.path.join(os.path.dirname(os.path.dirname(f)), 'analysis.txt')
+
+        new_dir = os.path.dirname(os.path.dirname(f))
+        out_path = os.path.join(new_dir, 'analysis.txt')
+        
+        path_parts = PurePath(os.path.realpath(new_dir)).parts
+        
+        genre, composer, opus, movement = path_parts[-4:]
+        genre = genre[:-1].replace('_', ' ')  # Cut plural 's'
+        composer = composer.replace('_', ' ')
+
+        work_str = genre  # Both cases
+        if 'Mozart' in composer:
+            work_str += f" {opus}"  # Straightforward K number, always 3 digits
+        elif 'Beethoven' in composer:
+            m = re.search(r"Op0*(?P<opus>\d+)(_No0?(?P<num>\d+))?", opus)
+            work_str += f" Op. {m.group('opus')}"
+            if m.group('num'):
+                work_str += f" No. {m.group('num')}"
+        work_str += f", Movement {movement}"  # Both cases
+        
         print(f"Processing {out_path} ...", end="", flush=True)
-        stream = romanText.tsvConverter.TsvHandler(f, dcml_version=2).toM21Stream()
-        
-        stream.insert(0, metadata.Metadata())
-        stream.metadata.composer = {"Quartets": "Beethoven"}[corpus]
-        stream.metadata.analyst = {
-            "Quartets": "Neuwirth et al. ABC dataset. See https://github.com/DCMLab/ABC"
-        }[corpus]
-        stream.metadata.title = work_str
-        
+        analysis = romanText.tsvConverter.TsvHandler(f, dcml_version=2).toM21Stream()
+        analysis.insert(0, metadata.Metadata())
+        analysis.metadata.composer = composer
+        analysis.metadata.analyst = 'DCMLab. See https://github.com/DCMLab/'
+        analysis.metadata.title = work_str
+
+        # TODO overwrite / path exists check
         converter.subConverters.ConverterRomanText().write(
-            stream, 'romanText', fp=out_path
+            analysis, 'romanText', fp=out_path
         )
         print(" done.")
 
@@ -523,16 +613,21 @@ def find_incomplete_measures_corpus(corpus: str = 'OpenScore-LiederCorpus',
 
     return out_dict
 
+
 # ------------------------------------------------------------------------------
 
 # script
 
 if __name__ == "__main__":
     import argparse
+
     parser = argparse.ArgumentParser()
-    parser.add_argument("--rebuild-abc", action="store_true")
+    parser.add_argument("--rebuild_DCML_ABC", action="store_true")
+    parser.add_argument("--rebuild_DCML_Mozart", action="store_true")
     args = parser.parse_args()
-    if args.rebuild_abc:
-        convert_DCML_tsv_analyses()
+    if args.rebuild_DCML_ABC:
+        convert_DCML_tsv_analyses(corpus = 'Quartets')
+    elif args.rebuild_DCML_Mozart:
+        convert_DCML_tsv_analyses(corpus = 'Piano_Sonatas')
     else:
         parser.print_help()

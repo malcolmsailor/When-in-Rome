@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 ===============================
 SKELETON HARMONY (skeletonHarmony.py)
 ===============================
@@ -10,8 +10,8 @@ Mark Gotham, 2020
 LICENCE:
 ===============================
 
-Creative Commons Attribution-NonCommercial 4.0 International License.
-https://creativecommons.org/licenses/by-nc/4.0/
+Creative Commons Attribution-ShareAlike 4.0 International License
+https://creativecommons.org/licenses/by-sa/4.0/
 
 
 ABOUT:
@@ -32,16 +32,13 @@ Output options:
 4. simple template from the score in Romantext format (no analysis at all);
 in either Romantext cases (3, 4), this can be with or without a shorthand for measure equivalences.
 
-'''
+"""
 
 from copy import deepcopy
 import fractions
-import os
 import re
-import unittest
 
 from music21 import chord
-from music21 import converter
 from music21 import key
 from music21 import roman
 from music21 import repeat
@@ -50,7 +47,7 @@ from music21 import repeat
 # ------------------------------------------------------------------------------
 
 class RnAnalysis:
-    '''
+    """
     Roman numeral analysis.
 
     Takes in a score, and optionally:
@@ -77,20 +74,20 @@ class RnAnalysis:
     FROM: Score + annotated reduction (keys and tonicizations only)
     VIA: getAnnotationsAndLocations and chfyChordAndLabel
     TO: Any output format (score, Romantext)
-    '''
+    """
 
     def __init__(self,
                  score,
                  analysisPartNo: int = -1,
-                 templateParts='all',
+                 templateParts="all",
                  # Annotations:
-                 annotationTextClass: str = 'Lyric',
+                 annotationTextClass: str = "Lyric",
                  adaptText: bool = True,
                  # Metadata:
-                 composer: str = '',
-                 title: str = '',
-                 analyst: str = '',
-                 proofreader: str = '',
+                 composer: str = "",
+                 title: str = "",
+                 analyst: str = "",
+                 proofreader: str = "",
                  notes: list = []
                  ):
 
@@ -100,11 +97,11 @@ class RnAnalysis:
         self.score = score
         self.analysisPartNo = analysisPartNo  # Part number
         self.templateParts = templateParts
-        measures = self.score.parts[0].getElementsByClass('Measure')
+        measures = self.score.parts[0].getElementsByClass("Measure")
         self.firstMeasureNumber = measures[0].measureNumber
         if self.firstMeasureNumber not in [0, 1]:
-            raise ValueError('The first measure number should be 1, or 0 for anacruses. '
-                             f'It is currently {self.firstMeasureNumber}.')
+            raise ValueError("The first measure number should be 1, or 0 for anacruses. "
+                             f"It is currently {self.firstMeasureNumber}.")
         self.lastMeasureNumber = measures[-1].measureNumber
 
         self.timeSignatures = None
@@ -117,11 +114,11 @@ class RnAnalysis:
 
         # Textual annotations
         self.annotationsAndLocations = None
-        if annotationTextClass in ['Lyric', 'TextExpression']:
+        if annotationTextClass in ["Lyric", "TextExpression"]:
             self.annotationTextClass = annotationTextClass
         else:
-            raise ValueError(f'The annotationTextClass (currently {annotationTextClass}) must be '
-                             'either \'Lyric\' (default), or \'TextExpression\'.')
+            raise ValueError(f"The annotationTextClass (currently {annotationTextClass}) must be "
+                             "either \"Lyric\" (default), or \"TextExpression\".")
         self.adaptText = adaptText
 
         # Metadata / preamble
@@ -134,34 +131,36 @@ class RnAnalysis:
         self.prepPreamble()
 
     def getTSs(self):
-        '''
+        """
         Retrieve all time signatures and make timeSignatures dict.
-        '''
+        """
 
-        self.timeSignatures = self.score.parts[0].recurse().getElementsByClass('TimeSignature')
+        self.timeSignatures = self.score.parts[0].recurse().getElementsByClass("TimeSignature")
         self.timeSigMeasureDict = {}
         for x in self.timeSignatures:
             self.timeSigMeasureDict[x.measureNumber] = x.ratioString
 
     def prepPreamble(self):
-        '''
+        """
         Metadata for the filename and (if applicable) writeRoman. Priority order:
         1. User defined takes priority (no action here or below),
         2. Then anything retrievable from the score (see prepPreamble),
         3. Failing 1 and 2, placeholders.
-        '''
+        """
 
-        if not self.composer:  # default unless set
+        if self.composer:  # default unless set
+            self.preamble.append(f"Composer: {self.composer}")
+        else:
 
             if self.score.metadata.composer:
                 self.composer = self.score.metadata.composer  # overwrite
-                self.preamble.append(f'Composer: {self.composer}')
+                self.preamble.append(f"Composer: {self.composer}")
             else:
-                self.composer = 'Unknown'
-                self.preamble.append('Composer: ')
+                self.composer = "Unknown"
+                self.preamble.append("Composer: ")
 
         if self.title:
-            self.preamble.append(f'Title: {self.title}')
+            self.preamble.append(f"Title: {self.title}")
 
         else:
             workingTitle = []
@@ -169,44 +168,44 @@ class RnAnalysis:
             if self.score.metadata.title:
                 workingTitle.append(self.score.metadata.title)
             if self.score.metadata.movementNumber:
-                workingTitle.append(f'- No.{self.score.metadata.movementNumber}:')  # Spaces later
+                workingTitle.append(f"- No.{self.score.metadata.movementNumber}:")  # Spaces later
             if self.score.metadata.movementName:
                 if self.score.metadata.movementName != self.score.metadata.title:
                     workingTitle.append(self.score.metadata.movementName)
 
             if len(workingTitle) > 0:
-                self.title = ' '.join(workingTitle)
-                self.preamble.append(f'Title: {self.title}')
+                self.title = " ".join(workingTitle)
+                self.preamble.append(f"Title: {self.title}")
                 # then adjustments for use as filename:
-                self.title = self.title.replace('.', '')
-                self.title = self.title.replace(':', '')
-                self.title = self.title.replace(' ', '_')
+                self.title = self.title.replace(".", "")
+                self.title = self.title.replace(":", "")
+                self.title = self.title.replace(" ", "_")
             else:
-                self.title = 'Unknown'
-                self.preamble.append('Title: ')
+                self.title = "Unknown"
+                self.preamble.append("Title: ")
 
-        self.preamble.append(f'Analyst: {self.analyst}')
-        self.preamble.append(f'Proofreader: {self.proofreader}')
+        self.preamble.append(f"Analyst: {self.analyst}")
+        self.preamble.append(f"Proofreader: {self.proofreader}")
 
         if self.notes:
             for nt in self.notes:
-                self.preamble.append(f'Note: {nt}')
+                self.preamble.append(f"Note: {nt}")
 
     # ------------------------------------------------------------------------------
 
     # For on-score analysis
 
     def getAnnotationsAndLocations(self):
-        '''
+        """
         Retrieve analytical text from a user-specified:
             part (self.analysisPartNo, the lowest part of a score by default); and
             class (lyrics on notes in that part by default, alternatively text expressions).
         Used whether the input is a full analysis or just a reduction.
-        '''
+        """
 
         self.annotationsAndLocations = []
 
-        if self.annotationTextClass == 'Lyric':
+        if self.annotationTextClass == "Lyric":
             for n in self.score.parts[self.analysisPartNo].recurse().notes:
                 if n.lyric:
                     txt = n.lyric
@@ -215,9 +214,9 @@ class RnAnalysis:
 
                     self.annotationsAndLocations.append([n.measureNumber, n.beat, txt])
 
-        else:  # self.annotationTextClass == 'TextExpression':
+        else:  # self.annotationTextClass == "TextExpression":
             for elem in self.score.parts[self.analysisPartNo].recurse():
-                if 'TextExpression' in elem.classes:
+                if "TextExpression" in elem.classes:
                     txt = elem.content  # Note
                     if self.adaptText:
                         txt = fixTextRn(txt)
@@ -228,10 +227,13 @@ class RnAnalysis:
 
     # For partial analysis (deductions)
 
-    def chfyChordAndLabel(self,
-                          ignoreParts: int = 2,
-                          tonicizationsRemainInEffect: bool = False):
-        '''
+    def chfyChordAndLabel(
+            self,
+            ignoreParts: int = 2,
+            tonicizationsRemainInEffect: bool = False,
+            prefer_secondary: bool = False
+    ):
+        """
         To use in the case of a partial analysis with chords and key information.
 
         Takes each successive chord and key/tonicization labelling lyric,
@@ -239,14 +241,13 @@ class RnAnalysis:
         returns that as data, or
         as appended to the score in question.
 
-        Notes for the markup:
-            changes of key remain in effect until the next marking, but
-            changes of tonicizations don't by default (settable with tonicizationsRemainInEffect).
+        Note that changes of key remain in effect until the next marking, but
+        changes of tonicizations do not by default (settable with tonicizationsRemainInEffect).
 
         That said, you may want to put in reminders of the prevailing key occasionally
         (after a tonicization, or indeed elsewhere);
-        that's fine and doesn't make any different to the analysis.
-        '''
+        that is fine and does not make any different to the analysis.
+        """
 
         self.deducedAnalysis = []
 
@@ -255,10 +256,10 @@ class RnAnalysis:
             reduction.remove(reduction.parts[0])  # Top parts of the original score
 
         self.chfyScore = reduction.stripTies().chordify()
-        self.chfyScore.partName = 'Roman'
+        self.chfyScore.partName = "Roman"
 
         currentIndex = 0  # Index
-        currentKey = 'FAKE KEY'  # Initialise empty for inclusion of the first key
+        currentKey = "FAKE KEY"  # Initialise empty for inclusion of the first key
         currentTonicization = None
 
         if not self.annotationsAndLocations:
@@ -278,26 +279,28 @@ class RnAnalysis:
                                                                             0:2]:
                 stringInQuestion = keyData[currentIndex][2]  # Before updating current index
                 currentIndex += 1
-                if '/' in stringInQuestion:  # Then it's a local tonicization
-                    rnFigureString, currentTonicization = stringInQuestion.split('/')
+                if "/" in stringInQuestion:  # Indicates a local tonicization (X/Y)
+                    rnFigureString, currentTonicization = stringInQuestion.split("/")
                     # TODO make use of any rnFigureString specified?
-                    # TODO support e.g. '/g' as well as (and converting it to) relative ('/ii')
-                elif ':' in stringInQuestion:  # modulation
-                    currentKey, rnFigureString = stringInQuestion.split(':')
+                    # TODO support e.g. "/g" as well as (and converting it to) relative ("/ii")
+                elif ":" in stringInQuestion:  # modulation
+                    currentKey, rnFigureString = stringInQuestion.split(":")
                     # TODO make use of any rnFigureString specified?
                 else:
-                    x = re.search('[a-gA-G]', stringInQuestion[0])
-                    if x:  # modulation without RN. NB: Doesn't support Fr43 or Ger65
+                    x = re.search("[a-gA-G]", stringInQuestion[0])
+                    if x:  # modulation without RN. Note we don't suport Fr43 or Ger65 (start F, G)
                         currentKey = stringInQuestion
                         currentTonicization = None
                     else:
                         # TODO accept anything else as a full, user-defined Roman numeral?
-                        raise ValueError(f'Unrecognised entry {stringInQuestion} '
-                                         f'in measure {ch.measureNumber}, '
-                                         f'beat {ch.beat}')
+                        raise ValueError(f"Unrecognised entry {stringInQuestion} "
+                                         f"in measure {ch.measureNumber}, "
+                                         f"beat {ch.beat}")
 
             if not currentTonicization:
-                rn = roman.romanNumeralFromChord(ch, key.Key(currentKey))
+                rn = roman.romanNumeralFromChord(ch,
+                                                 key.Key(currentKey),
+                                                 preferSecondaryDominants=prefer_secondary)
             else:  # currentTonicization
                 localKey = getLocalKey(currentTonicization, currentKey)
                 rn = roman.romanNumeralFromChord(ch,
@@ -310,7 +313,7 @@ class RnAnalysis:
 
             # Lyric modifications. Otherwise the lyric is unchanged
             if startKey != currentKey:
-                lyric = currentKey + ': ' + lyric
+                lyric = currentKey + ": " + lyric
             elif currentTonicization:
                 lyric = lyric + stringInQuestion
 
@@ -322,12 +325,12 @@ class RnAnalysis:
     # ------------------------------------------------------------------------------
 
     def makeMeasureStrings(self):
-        '''
+        """
         Takes information from lists of [measure, beat, chord]
         retrieved by either getAnnotationsAndLocations or chfyChordAndLabel
         and converts it into separate rntxt strings to print for each measure
         stored in a dict such that dict[measureNumber] = string.
-        '''
+        """
 
         if self.deducedAnalysis:  # Not doing the deductions here.
             infoToUse = self.deducedAnalysis
@@ -362,15 +365,15 @@ class RnAnalysis:
 
     def getRepeats(self,
                    threshold: int = 1):
-        '''
+        """
         Finds equivalent passages (e.g. song verses) to avoid duplicating the same material
         and to encourage (but not require!) parallel analyses for identical passages.
 
-        Works by comparing measures of the whole score using music21's RepeatFinder.
+        Works by comparing measures of the whole score using music21"s RepeatFinder.
 
-        Optionally: reduce the parts to consider in the comparison by specifying 'partsToRemove'.
+        Optionally: reduce the parts to consider in the comparison by specifying "partsToRemove".
         This removes parts from the bottom of the score (in the expectation of parts
-        corresponding to the 'analysis' parts of the Roman Umpire's ScoreAndAnalysis).
+        corresponding to the "analysis" parts of the romanUmpire.ScoreAndAnalysis).
 
         Notes for using the RepeatFinder:
         1.
@@ -387,29 +390,29 @@ class RnAnalysis:
         Similar issues with TimeSignature changes during the measure range.
 
         Here, getRepeats sets measureRangeEqualities.
-        '''
+        """
 
         self.processTemplateParts()
 
         simMGs = repeat.RepeatFinder(self.tempScore).getSimilarMeasureGroups(threshold=threshold)
 
         # Separate into static function def simplify() for getting
-        # from list of contiguous measures to 'From-to = from-to' pairs
+        # from list of contiguous measures to "From-to = from-to" pairs
         self.measureRangeEqualities = {}
         for rangeComp in simMGs:
             simplified = [rangeComp[1][0], rangeComp[1][-1], rangeComp[0][0], rangeComp[0][-1]]
             self.measureRangeEqualities[simplified[0]] = simplified
 
     def processTemplateParts(self):
-        '''
+        """
         Checks the parts to consider for the template and processes them if necessary and valid.
-        '''
+        """
 
-        msg = f'The templateParts (currently {self.templateParts}) ' \
-              'must be either the string \'all\' (default) or a list of non-negative integers ' \
-              'corresponding to the part number in the score (counting from 0).'
+        msg = f"The templateParts (currently {self.templateParts}) " \
+              "must be either the string \"all\" (default) or a list of non-negative integers " \
+              "corresponding to the part number in the score (counting from 0)."
 
-        if self.templateParts == 'all':
+        if self.templateParts == "all":
             self.tempScore = self.score  # No adjustment, so avoid (no need to) deepcopy
             return
         else:
@@ -434,22 +437,20 @@ class RnAnalysis:
 
     def prepList(self,
                  template: bool = True):
-        '''
+        """
         Prepares a list of text lines that will be written to rntxt by writeRomanText().
         Both methods are used for both full analyses and templates.
 
-        Options:
-            template only, with no analysis included (template=True);
-            full analysis extracted from the score (template=False)
+        In either case, this integrates score information including:
+        - timeSignatures (including changes)
+        - repeat ranges (if getRepeats has been called and only as `Notes:`)
 
-        In either case, this integrates score information:
-            timeSignatures
-            repeat ranges (if getRepeats has been called)
-
-        Note: preamble handled separately
-        '''
+        Args:
+            template (bool): If True, write a template file with metadata, measures, but no more.
+                             If False, full analysis extracted from the score.
+        """
         # TODO: option for removing duplicate analysis from repeat passages
-        # TODO: option for recurring harmonies?
+        # TODO: similar option for recurring harmonies (repeats on the rntxt)?
 
         tsMeasures = self.timeSigMeasureDict.keys()
 
@@ -461,22 +462,23 @@ class RnAnalysis:
 
         for x in range(self.firstMeasureNumber, self.lastMeasureNumber + 1):
 
-            # Time signatures (whether it's a template or not)
+            # Time signatures (whether a template or not)
             if x in tsMeasures:  # First, before corresponding measure analysis
                 ts = self.timeSigMeasureDict[x]
-                self.combinedList.append(f'\nTime Signature: {ts}')
+                self.combinedList.append(f"\nTime Signature: {ts}")
 
             # Measure range equalities (currently a duplicate)
             if x in measureRangeEqualityStarts:
                 entry = self.measureRangeEqualities[x]
                 if entry[0] == entry[1]:  # Single measure comparison
-                    self.combinedList.append(f'Note: m{entry[0]} = m{entry[2]}')
+                    self.combinedList.append(f"Note: m{entry[0]} = m{entry[2]}")
                 else:  # Measure range comparison
-                    self.combinedList.append(f'Note: m{entry[0]}-{entry[1]} = m{entry[2]}-{entry[3]}')
+                    self.combinedList.append(
+                        f"Note: m{entry[0]}-{entry[1]} = m{entry[2]}-{entry[3]}")
 
             # Measure lines (analysis where provide; empty for template)
             if template:
-                self.combinedList.append(f'm{x} b1')
+                self.combinedList.append(f"m{x} b1")
             else:
                 if x in self.analysisDict.keys():
                     self.combinedList.append(self.analysisDict[x])
@@ -487,32 +489,32 @@ class RnAnalysis:
     # To write
 
     def writeRomanText(self,
-                       outPath: str = './',
-                       fileName: str = ''):
-        '''
+                       outPath: str = "./",
+                       fileName: str = ""):
+        """
         Writes the combined information to a .txt file.
         Use for both full analyses and templates.
-        '''
+        """
 
         if not self.combinedList:
             self.prepList()
 
         if not fileName:  # Never an empty string: placeholders set by prepPreamble as needed.
-            fileName = f'{self.composer}_-_{self.title}'
+            fileName = f"{self.composer}_-_{self.title}"
 
-        text_file = open(f'{outPath}{fileName}.txt', "w")
+        text_file = open(f"{outPath}{fileName}.txt", "w")
         [text_file.write(entry + "\n") for entry in self.preamble]
         [text_file.write(entry + "\n") for entry in self.combinedList]
         text_file.close()
 
     def writeScore(self,
-                   outPath: str = './',
-                   fileName: str = ''):
-        '''
+                   outPath: str = "./",
+                   fileName: str = ""):
+        """
         Writes a score.
         Intended for the score with Roman numeral analysis added.
-        Note: chfyChordAndLabel() will run if it hasn't run already.
-        '''
+        Note: chfyChordAndLabel() will run if it has not run already.
+        """
 
         if not self.chfyScore:
             self.chfyChordAndLabel()
@@ -520,7 +522,7 @@ class RnAnalysis:
 
         if not fileName:
             fileName = self.title
-        self.score.write(fp=f'{outPath}{fileName}.musicxml')
+        self.score.write(fp=f"{outPath}{fileName}.musicxml")
 
 
 # ------------------------------------------------------------------------------
@@ -529,10 +531,10 @@ class RnAnalysis:
 
 def getLocalKey(local_key: chord.Chord,
                 global_key: key.Key):
-    '''
+    """
     Works out the quality (major / minor) of a local key relative to a global one
     Note similar to a function in romanText.tsvConverter.
-    '''
+    """
     asRoman = roman.RomanNumeral(local_key, global_key)
     rt = asRoman.root().name
     if asRoman.isMajorTriad():
@@ -540,42 +542,42 @@ def getLocalKey(local_key: chord.Chord,
     elif asRoman.isMinorTriad():
         return rt.lower()
     else:  # TODO check redundancy - keys checks (and potential fails) in roman.RomanNumeral
-        raise ValueError(f'The local_key (currently {local_key}) must be a major or minor triad.')
+        raise ValueError(f"The local_key (currently {local_key}) must be a major or minor triad.")
 
 
 def fixTextRn(textRn: str):
-    '''
+    """
     Adjusts a prospective Roman numeral string such that music21 will accept it.
 
     Mainly, this serves to remove any characters other than
-    a-g, A-G, 'i', 'I', 'v', 'V',
-    '#', 'b', '-', ':', and
+    a-g, A-G, "i", "I", "v", "V",
+    "#", "b", "-", ":", and
     Arabic numerals (0-9).
     This includes removing hidden non-printing characters like the non-breaking space ("\xc2\xa0").
 
     This also includes swaps that would be covered in music21, such as:
-    '/o' for ø and '°' for 'o'.
+    "/o" for ø and "°" for "o".
 
     Finally, it also ensures that there is exactly one space after a colon.
-    Music21's Roman text reader can handle excessive spaces, but not a missing one.
-    '''
+    Music21"s Roman text reader can handle excessive spaces, but not a missing one.
+    """
     # TODO: regex instead?
 
-    swapDict = {'/o': 'ø',  # e.g. vii/o7 >  viiø7
-                '°': 'o',  # e.g. ii°6 > iio6
-                '(': '[',  # For [no5] style additions
-                ')': ']',  # "
+    swapDict = {"/o": "ø",  # e.g. vii/o7 >  viiø7
+                "°": "o",  # e.g. ii°6 > iio6
+                "(": "[",  # For [no5] style additions
+                ")": "]",  # "
                 }
 
-    legalCharacters = ['#', 'b', '-',
-                       '+', 'o', 'ø',
-                       ':', '[', ']', '/',
+    legalCharacters = ["#", "b", "-",
+                       "+", "o", "ø",
+                       ":", "[", "]", "/",
 
-                       'a', 'b', 'c', 'd', 'e', 'f', 'g',
-                       'i', 'v',
-                       'n',  # for '[no3]'
+                       "a", "b", "c", "d", "e", "f", "g",
+                       "i", "v",
+                       "n",  # for "[no3]"
 
-                       '1', '2', '3', '4', '5', '6', '7', '8', '9']
+                       "1", "2", "3", "4", "5", "6", "7", "8", "9"]
 
     # Swaps, replacements, and removals
     for k in swapDict.keys():
@@ -584,46 +586,46 @@ def fixTextRn(textRn: str):
 
     for char in textRn:
         if char.lower() not in legalCharacters:
-            textRn = textRn.replace(char, '')
+            textRn = textRn.replace(char, "")
 
     # Exactly one space after any colons, all previous spaces having being removed
-    textRn = textRn.replace(':', ': ')
+    textRn = textRn.replace(":", ": ")
 
     return textRn
 
 
 def rnString(measureBeatStringList: list,
-             inString: str = ''):
-    '''
+             inString: str = ""):
+    """
     Write the start of a line of RNTXT.
     To start a new line (one per measure with measure, beat, chord),
     set inString = None.
     To extend an existing line (measure already given),
     set inString to that existing list.
-    '''
+    """
 
     if not inString:  # New line
-        inString = 'm' + str(measureBeatStringList[0])
+        inString = "m" + str(measureBeatStringList[0])
 
     bt = measureBeatStringList[1]
     bt = intBeat(bt)
-
-    newString = inString + ' b' + str(bt) + ' ' + str(measureBeatStringList[2])
-
-    return newString
+    if bt == 1:
+        return " ".join([inString, str(measureBeatStringList[2])])
+    else:
+        return inString + " b" + str(bt) + " " + str(measureBeatStringList[2])
 
 
 def intBeat(beat,
             roundValue: int = 2):
-    '''
+    """
     Converts beats to integers if possible, and otherwise to rounded decimals.
     Accepts input as string, int or float.
-    '''
+    """
 
     options = [str, int, float, fractions.Fraction]
 
     if type(beat) not in options:
-        raise ValueError(f'Beat, (currently {beat}) must be one of {options}.')
+        raise ValueError(f"Beat, (currently {beat}) must be one of {options}.")
 
     if type(beat) in [str, fractions.Fraction]:
         beat = float(beat)
@@ -636,107 +638,27 @@ def intBeat(beat,
 
 # ------------------------------------------------------------------------------
 
-class Test(unittest.TestCase):
-    '''
-    Tests for both main analysis cases - one full, one partial - and for a template.
-    Additional test for smaller static functions.
-    '''
+if __name__ == "__main__":
 
-    def testFullAnalysis(self):
+    import argparse
+    from music21 import converter
 
-        basePath = os.path.join('..', 'Corpus', 'OpenScore-LiederCorpus')
-        composer = 'Hensel,_Fanny_(Mendelssohn)'
-        collection = '5_Lieder,_Op.10'
-        song = '1_Nach_Süden'
-        combinedPath = os.path.join(basePath, composer, collection, song, 'analysis_on_score.mxl')
+    parser = argparse.ArgumentParser()
 
-        score = converter.parse(combinedPath)
-        rna = RnAnalysis(score)
-        rna.prepList(template=False)  # ***
+    parser.add_argument("--process_one_score", action="store_true", )
+    parser.add_argument("path_to_score",
+                        type=str,
+                        required=False,
+                        help="Path to a skeletal analysis within the meta-corpus.")
 
-        self.assertEqual(rna.combinedList[0], '\nTime Signature: 12/8')
-        self.assertEqual(rna.combinedList[15], 'm15 b1 V b2 iio b3 V7')
+    args = parser.parse_args()
 
-    # ------------------------------------------------------------------------------
+    if args.process_one_score:
+        score = converter.parse(args.path_to_score)
+        analysis = RnAnalysis(score)
+        analysis.chfyChordAndLabel(ignoreParts=2)
+        analysis.prepList(template=False)
+        analysis.writeRomanText()
 
-    def testPartialAnalysis(self):
-
-        combinedPath = os.path.join('.', 'testPartialAnalysis.mxl')
-        score = converter.parse(combinedPath)
-
-        preludeAnalysis = RnAnalysis(score,
-                                     composer='J.S. Bach',
-                                     title='Prelude No. 1 (BWV 846)'
-                                     )
-        preludeAnalysis.chfyChordAndLabel(ignoreParts=2)
-
-        da = preludeAnalysis.deducedAnalysis
-
-        self.assertEqual(da[0], [1, 1.0, 'C: I'])
-        self.assertEqual(da[11], [12, 1.0, 'd: viio6#43'])  # TODO: fix m21's RomanNumeralFromChord
-        self.assertEqual(da[19], [20, 1.0, 'V7/IV'])
-        self.assertEqual(da[22], [23, 1.0, 'viio42'])
-
-    # ------------------------------------------------------------------------------
-
-    def testTemplate(self):
-
-        from music21 import converter
-        import os
-
-        basePath = os.path.join('..', 'Corpus', 'OpenScore-LiederCorpus')
-        composer = 'Hensel,_Fanny_(Mendelssohn)'
-        collection = '5_Lieder,_Op.10'
-        song = '1_Nach_Süden'
-        combinedPath = os.path.join(basePath, composer, collection, song, 'score.mxl')
-
-        score = converter.parse(combinedPath)
-        rna = RnAnalysis(score)
-        rna.prepList(template=True)  # ***
-
-        self.assertEqual(rna.combinedList[0], '\nTime Signature: 12/8')
-        self.assertEqual(rna.combinedList[15], 'm14 b1')
-
-    # ------------------------------------------------------------------------------
-
-    def testRnString(self):
-        test = rnString([1, 1, 'G: I'])
-        self.assertEqual(test, 'm1 b1 G: I')
-
-    # ------------------------------------------------------------------------------
-
-    def testIntBeat(self):
-        test = intBeat(1, roundValue=2)
-        self.assertEqual(test, 1)
-        test = intBeat(1.5, roundValue=2)
-        self.assertEqual(test, 1.5)
-        test = intBeat(1.11111111, roundValue=2)
-        self.assertEqual(test, 1.11)
-        test = intBeat(8/3, roundValue=2)
-        self.assertEqual(test, 2.67)
-
-    def testFixTextRn(self):
-        testString = 'e:   viio6'  # Excessive spaces, remove them
-        self.assertEqual(fixTextRn(testString), 'e: viio6')
-
-        testString = 'f:i'  # No space, make one
-        self.assertEqual(fixTextRn(testString), 'f: i')
-
-        testString = 'F: I6'
-        self.assertEqual(fixTextRn(testString), testString)  # Unchanged
-
-        testString = 'F: vii/o6'
-        self.assertEqual(fixTextRn(testString), 'F: viiø6')
-
-        testString = 'V\xc2\xa042(no3)'
-        self.assertEqual(fixTextRn(testString), 'V42[no3]')
-
-        testString = 'ii°6'
-        self.assertEqual(fixTextRn(testString), 'iio6')
-
-
-# ------------------------------------------------------------------------------
-
-if __name__ == '__main__':
-    unittest.main()
-
+    else:
+        parser.print_help()

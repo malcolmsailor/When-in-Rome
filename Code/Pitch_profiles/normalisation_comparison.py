@@ -1,39 +1,37 @@
 """
+NAME
 ===============================
 Normalisation Comparison (normalisation_comparison.py)
-===============================
 
-Mark Gotham, 2021
+
+BY
+===============================
+Mark Gotham
 
 
 LICENCE:
 ===============================
-
 Creative Commons Attribution-ShareAlike 4.0 International License
 https://creativecommons.org/licenses/by-sa/4.0/
 
 
 Citation:
 ===============================
-
 Gotham et al. "What if the 'When' Implies the 'What'?". ISMIR, 2021
 (see README.md)
 
 
 ABOUT:
 ===============================
-
 Static functions common to several modules here.
 
 """
 
-from typing import List, Union
-
+from typing import List
 import numpy as np
-import math
-import unittest
 
-import key_profiles
+from . import key_profiles
+from ..Resources.key_profiles_literature import AlbrechtShanahan, QuinnWhite
 
 # ------------------------------------------------------------------------------
 
@@ -158,55 +156,7 @@ def pc_list_to_distribution(pc_list: List[int]):
 
 # ------------------------------------------------------------------------------
 
-# Files, Imports, Tabular
-
-def importSV(pathToFile: str,
-             splitMarker: str = ''):
-    """
-    Imports TSV file data for further processing.
-    """
-
-    if not splitMarker:
-        ext = pathToFile.split('.')[-1]
-        if ext == 'tsv':
-            splitMarker = '\t'
-        elif ext == 'csv':
-            splitMarker = ','
-
-    with open(pathToFile, 'r') as f:
-        data = []
-        for row_num, line in enumerate(f):
-            values = line.strip().split(splitMarker)
-            data.append([v.strip('\"') for v in values])
-    f.close()
-
-    return data
-
-
-def data_by_heading(file_path: str,
-                    headings_row: int = 0):
-    """
-    Imports an SV file from the provided `file_path`
-    and converts the data to a directly to list of dicts
-    with headers given by the data in the `headings_row`.
-    """
-
-    table = importSV(file_path)
-
-    headings = table[headings_row]
-    out_list = []
-    for entry in table[headings_row + 1:]:
-        data = {}
-        for idx, col in enumerate(entry):
-            data[headings[idx]] = col
-        out_list.append(data)
-    return out_list
-
-
-# ------------------------------------------------------------------------------
-
 # Numeracy
-
 def normalise(distribution: list,
               normalisation_type: str = 'Euclidean',
               round_output: bool = True,
@@ -223,30 +173,24 @@ def normalise(distribution: list,
     to N decimal places (set by round_places, default=3).
     """
 
-    max_use = max(distribution)
-    if max_use == 0:
+    if np.max(distribution) == 0:
         return distribution  # All 0s: don't divide by 0 (or indeed do anything!)
 
     normalisation_type = normalisation_type.lower()
-
     if normalisation_type in ['euclidean', 'l2']:
-        val = math.sqrt(sum([x ** 2 for x in distribution]))
-
+        norm_ord = 2
     elif normalisation_type in ['sum', 'manhattan', 'l1']:
-        val = sum(distribution)
-
+        norm_ord = 1
     elif normalisation_type in ['max', 'maximum', 'infinity']:
-        val = max_use
-
+        norm_ord = np.inf
     else:
         raise ValueError('Invalid normalisation_type')
-
-    norm_dist = [(x / val) for x in distribution]
+    norm_dist = distribution / np.linalg.norm(distribution, ord=norm_ord)
 
     if round_output:
-        return [round(x, round_places) for x in norm_dist]
+        return list(np.round(norm_dist, round_places))
     else:
-        return norm_dist
+        return list(norm_dist)
 
 
 def check_length_match(x: list,
@@ -330,7 +274,7 @@ def compare_two_profiles(data1: list,  # e.g. source
 
 
 def compare_all_rotations(source,
-                          reference: dict = key_profiles.QuinnWhite,
+                          reference: dict = QuinnWhite,
                           comparison_type: str = 'Euclidean',
                           mode: str = 'major'):
     """
@@ -440,7 +384,7 @@ def best_major_minor_both(major_options: list,
 
 
 def best_key(dist: list,
-             model: dict = key_profiles.AlbrechtShanahan,
+             model: dict = AlbrechtShanahan,
              comparison_type: str = 'Euclidean'):
     """
     Run the comparisons for both major and minor over a given model usage
@@ -454,100 +398,6 @@ def best_key(dist: list,
 
 # ------------------------------------------------------------------------------
 
-class Test(unittest.TestCase):
-
-    def test_normalisation(self):
-        """
-        Test the sum and max normalisation methods with Prince and Schmuckler all beats major.
-        """
-        d = [0.919356471, 0.114927991, 0.729198287, 0.144709771, 0.697021822, 0.525970522,
-             0.214762724, 1, 0.156143546, 0.542952545, 0.142399406, 0.541215555]
-
-        d_l1 = normalise(d, normalisation_type='l1')
-        self.assertEqual(round(sum(d_l1), 2), 1)
-
-        d_l2 = normalise(d, normalisation_type='l2')
-        self.assertEqual(round(sum([x ** 2 for x in d_l2]), 2), 1)
-
-        d_max = normalise(d, normalisation_type='Max')
-        self.assertEqual(max(d_max), 1)
-
-    def test_Euclid(self):
-
-        # No difference (0) between a distribution profile and itself
-        d1 = [1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 1]
-        d2 = [1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 1]
-        d = compare_two_profiles(d1, d2, comparison_type='Euclidean')
-        self.assertEqual(d, 0)
-
-        # Max difference between two distributions with one distinct pitch each ...
-        d1 = [1, 0]
-        d2 = [0, 1]
-        # This equates to 2 for L1 comparison, and sqrt(2) for L2:
-        for comp, dist in (('L1', 2), ('L2', 1.414)):
-            self.assertEqual(compare_two_profiles(d1, d2, comparison_type=comp), dist)
-
-        # ... likewise for complements in any dimension
-        d1 = [1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 1]
-        d2 = [0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0]
-        d = compare_two_profiles(d1, d2, comparison_type='Euclidean')
-        self.assertEqual(d, 1.414)
-
-    def test_all_PCPs(self):
-        """
-        Check best key on all relevant PCP model prototypes
-        and both Euclidean and Manhattan comparison types
-        with the first segment of Beethoven Sonata no.1 (f minor).
-        """
-        data = [20.03, 1.0, 0.0, 0.0, 10.36, 15.2, 0.0, 15.2, 13.86, 0.0, 11.52, 0.0]
-        for mod in [key_profiles.AardenEssen,
-                    key_profiles.AlbrechtShanahan,
-                    key_profiles.BellmanBudge,
-                    key_profiles.KrumhanslKessler,
-                    key_profiles.KrumhanslSchmuckler,
-                    key_profiles.PrinceSchumuckler,
-                    key_profiles.QuinnWhite,
-                    key_profiles.Sapp,
-                    key_profiles.TemperleyKostkaPayne,
-                    key_profiles.TemperleyDeClerq
-                    ]:
-            for comp in ['Euclidean', 'Manhattan']:
-                k = best_key(data, mod, comparison_type=comp)
-                self.assertEqual(k, 'f')
-
-    def test_flat_profile(self):
-        """
-        For most models (with transposition equivalence) a flat usage profile
-        (e.g. silence) does not distinguish between key options.
-        It does, however, typically 'prefer' minor keys
-        as the reference prototype tends to be 'flatter' (i.e. more chromatic) than major.
-        The way this code is set up, it will arbitrarily return the first tested minor key (c).
-
-        As ever, QuinnWhite provides the exception: the profiles are not equivalent by key
-        so an actual choice of the flattest profile is returned, here 'bb'.
-
-        Note that if major and minor are exactly even, then best_key returns the minor option.
-        This is extremely unlikely in practice apart from these cases of a flat usage profile.
-        Even then it is only relevant when the source profile also consists of the same elements
-        in major and minor, rearranged in (i.e. Sapp in which both are 2 x '2', 5 x '1', 5 x '0').
-        """
-        flat_profile = [1.5] * 12
-        comps = ['L1', 'L2']
-        mods = [(key_profiles.KrumhanslKessler, 'c'),
-                (key_profiles.AlbrechtShanahan, 'c'),
-                (key_profiles.Sapp, 'c'),
-                (key_profiles.TemperleyDeClerq, 'c'),
-                (key_profiles.QuinnWhite, 'bb'),
-                ]
-        for mod in mods:
-            for comp in comps:
-                res = best_key(flat_profile, model=mod[0], comparison_type=comp)
-                self.assertEqual(res, mod[1])
-
-
-# ------------------------------------------------------------------------------
-
 if __name__ == '__main__':
     import doctest
     doctest.testmod()
-    unittest.main()

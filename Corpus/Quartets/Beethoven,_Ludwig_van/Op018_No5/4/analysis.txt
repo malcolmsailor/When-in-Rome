@@ -1,7 +1,7 @@
-Composer: Beethoven
-Title: String quartet Op. 18 No. 5, Movement 4
-Analyst: Neuwirth et al. ABC dataset. See https://github.com/DCMLab/ABC
-Proofreader: 
+Composer: Beethoven, Ludwig van
+Title: n05op18-5_04
+Analyst: DCML members and contributors. Licence CC-BY-NC-SA. This file is automatically converted from https://raw.githubusercontent.com/DCMLab/ABC/harmonies/n05op18-5_04.tsv
+Proofreader: Please refer to that source repository for full details.
 
 Time Signature: 2/2
 m0 b2.25 A: V
@@ -95,8 +95,9 @@ m89 I
 m90 V7
 m91 I
 m92 A: V7
-m93 V7 f#: #viio7
-m94 V65
+m93a V7
+m93b f#: #viio7
+m94b V65
 m95 i64 b2 i
 m96 i[no5][add6] b2.5 i
 m97 V7 b2 i

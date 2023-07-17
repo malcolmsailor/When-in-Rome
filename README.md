@@ -1,15 +1,20 @@
 ![GitHub top language](https://img.shields.io/github/languages/top/MarkGotham/When-in-Rome)
 ![GitHub issues](https://img.shields.io/github/issues-raw/MarkGotham/When-in-Rome)
 ![GitHub last commit](https://img.shields.io/github/last-commit/MarkGotham/When-in-Rome)
+![GitHub repo size](https://img.shields.io/github/repo-size/MarkGotham/When-in-Rome)
+![License](https://img.shields.io/badge/license-CC%20BY--SA%204.0-9)
 
 # When in Rome
 
-'When in Rome' brings together all of the world's harmonic analyses in encoded formats into a single, consistent repository.
-This enables musicians and developers to interact with that great body of work at scale, with minimal overheads.
+'When in Rome' brings together the world's functional harmonic analyses in encoded formats 
+into a single, consistent repository.
+This enables musicians and developers to interact with that great body of work at scale, 
+with minimal overheads.
 
-In total, there are now approximately 450 analyses and 100,000 Roman numerals in here.
+In total, there are now approximately 2,000 analyses of 1,500 distinct works.
 
-Additionally, 'When in Rome' provides code for working with this corpora, building on top of the [music21](https://github.com/cuthbertLab/music21/) library for music analysis.
+Additionally, 'When in Rome' provides code for working with these corpora, 
+building on the [music21](https://github.com/cuthbertLab/music21/) library for music analysis.
 
 ## Is it for me?
 
@@ -18,6 +23,20 @@ I.e., the focus is on the analyses.
 There is a very great deal we can do with those analyses alone.
 Clearly there are also certain questions to require analysis-source alignment.
 We do our best to cater for that by including the _score_ wherever possible, and as reliably aligned as possible (as anyone in the field knows, this is a significant challenge).
+
+### Maybe yes ...
+
+'When in Rome' data is also used in external research projects and apps including the:
+- ["Dezrann" app for visualising score-analysis and more](http://www.dezrann.net/) (coming soon)
+- ["Open Music Theory" (OMT) textbook's harmony anthology](https://viva.pressbooks.pub/openmusictheory/chapter/anthology-harmony/)
+- ["RAWL" app](https://rawl.vercel.app)
+- ["Sibelius" (Avid) notation software](https://www.avid.com/sibelius) (by permission, coming soon)
+- ["TiLiA" TimeLineAnnotator]() (coming soon)
+- ["VIMU" (Visual Musicology) app](https://vimu.app) via [AugmentedNet](https://github.com/napulen/AugmentedNet)
+
+Are you using 'When in Rome' in a public-facing project? Let us know!
+
+### Maybe no ...
 
 We're proud of how useful this is.
 All the same, it might not serve your needs.
@@ -47,35 +66,62 @@ Might we suggest that if you're looking for:
 The [Key Modulations and Tonicizations](Corpus/Textbooks/) corpus is a slight exception: we preserve the organisation of that corpus by author, title, example number, e.g., `Corpus/Textbooks/Aldwell,_Edward/Harmony_and_Voice_Leading/2a/`. So the `<genre>` is `Textbooks`, the `<composer>` is the author, the `<set>` is the title, and the `<movement>` is the example number.
 We find this more logical that re-organisation by composer.
 
-### (Almost) all folders include:
+### All folders include:
 
-- `score.mxl`
-  - What: A conversion of the corpus score into `.mxl` format for consistency and compressed to minimise file/corpus size.
+- `score.mxl` or a `remote.json` file including links to external score files 
+  - What: `score.mxl` is a copy of the score in the compressed musicXML format. 
+    This is provided for all new scores, as well as all originating elsewhere  
+    where that original is _in a format which music21 cannot parse_.
   - How to use: Open in any software for music notation (e.g., [MuseScore](https://musescore.org/)).
+  - Where there is no local `score.mxl`, there is a `remote.json` instead. Please note:
+    - This file points to an externally hosted score _in a format which music21 can parse_. 
+    - This is designed to prevent duplication and automatically include source updates.
+    - Note that MuseScore files are included in a local conversion (`.mxl`) rather than remote.
+      - This is because music21 cannot parse them and conversion requires the `mscore` package 
+        (see `Code.updates_and_checks.convert_musescore_score_corpus`).
+    - For downloading a local copy of remote files, see `Code.updates_and_checks.remote_scores` 
+      and the argument `convert_and_write_local`. Read those docs for details and warnings.
+    - Please check and observe the licence of all scores, especially those hosted externally.
 
 - `analysis.txt`
   - What: A human analysis in plain text.
-  - How to use: Open in any text editor. You can also use these analyses as a kind of template for your own, by creating a copy and editing only the moments you disagree with.
+  - How to use: Open in any text editor. 
+    You can also use these analyses as a kind of template for your own, 
+    by creating a copy and editing only the moments you disagree with.
  
-- `analysis_automatic.txt`.
-  - What: An automatic analysis made by [AugmentedNet](https://github.com/napulen/AugmentedNet) - a machine learning architecture which, in turn, is built on this meta-corpus' data.
+- `analysis_automatic.rntxt`.
+  - What: An automatic analysis made by [AugmentedNet](https://github.com/napulen/AugmentedNet) - 
+    a machine learning architecture which, in turn, is built on this meta-corpus' data.
   - How to use: In exactly the same way as a human analysis, e.g., as a template (same format, same parsing routines).
 
 ### Some folders include:
 
-- `Working/`, e.g., `Working/BPS_in_transit.csv` on the Beethoven sonatas
-  - What: A copy of original and/or intermediary formats for conversions.
-  - How to use: As a point of reference for full disclosure on the conversion process.
+- `remote.json` files 
+  - What: this provides additional information about remote content including paths to external 
+    scores as discussed above.
+  - Additionally, we take the opportunity to provide metadata including composer name and one or 
+    more sets of catalogue information (`Opus` and/or equivalent).
 
 - `analysis_<analyst>.txt`
-  - What: An alternative analysis, e.g., copy of an original analysis exactly as converted for cases where significant changes have been made.
-  - How to use: As a point of reference for full disclosure on the conversion process.
+  - What: An alternative analysis. This takes one of two forms:
+    - A copy of an original analysis exactly as converted for cases where significant changes 
+      have been made to that analysis. See, for example,
+      [this edit](/Corpus/Piano_Sonatas/Beethoven,_Ludwig_van/Op010_No1/1/analysis.txt)
+      [of this "original"](/Corpus/Piano_Sonatas/Beethoven,_Ludwig_van/Op010_No1/1/analysis_BPS.txt)
+    - A second analysis of the same work. The ['TAVERN'](https://github.com/jcdevaney/TAVERN) 
+      dataset includes pairs of analyses of the same work. In order to ensure there is exactly 
+      one `analysis.txt` throughout, we name the pair `analysis.txt` (note not 
+      `analysis_A.txt`) and `analysis_B.txt`.
+    - We likewise organise cases of two separate corpora of analyses of the same music this way.
+      - The set which is complete takes precedence for the `analysis.txt` name.
+  - How to use: All such text files can be opened in the normal way. "Original conversions" 
+    serve as a point of reference for full disclosure on the conversion process.
 
 ### Optional extra files (not included but easy to generate):
 
 This repo. includes code and clear instructions for creating any or all of the following additional files for the whole meta-corpus, or for a specific sub-corpus.
 
-The [example folder](./Code/Example/) contains all of these files for one example score: 
+The [example folder](./Tests/Resources/Example/) contains all of these files for one example score: 
 Clara Schumann's Lieder, Op.12, No.4, 'Liebst du um Schönheit'.
 Most of the variants derive from the options for pitch class profile generations, creating files in the form: `profiles_<and_features_>by_<segmentation_type>.<format>`
 - `<and_features_>` (optional) includes harmonic feature information. See notes at [Code/Pitch_profiles/chord_features.py](Code/Pitch_profiles/chord_features.py)
@@ -108,51 +154,127 @@ This corpus involves the combination of new analyses with conversions of those o
 ### Corpora originating elsewhere
 
 Converted from other formats:
-- the [DCMLab's](https://github.com/DCMLab/) standard ([conversion code here](https://github.com/cuthbertLab/music21/blob/master/music21/romanText/tsvConverter.py)):
-  - [Beethoven string quartets](/Corpus/Quartets/Beethoven,_Ludwig_van/) (complete, 16 string quartets, 70 movements): originating from the ['ABC' corpus](https://github.com/DCMLab/ABC).
-  - [Mozart Piano Sonatas](/Corpus/Piano_Sonatas/Mozart,_Wolfgang_Amadeus/) (complete, 18 sonatas): originating from ['The Annotated Mozart Sonatas' corpus](https://github.com/DCMLab/mozart_piano_sonatas).
+- the [DCMLab's](https://github.com/DCMLab/) standard
+  ([conversion code here](https://github.com/cuthbertLab/music21/blob/master/music21/romanText/tsvConverter.py)):
+  - [Beethoven string quartets](/Corpus/Quartets/Beethoven,_Ludwig_van/) 
+    (complete, 16 string quartets, 70 movements): originating from the
+    ['ABC' corpus](https://github.com/DCMLab/ABC).
+  - [Mozart Piano Sonatas](/Corpus/Piano_Sonatas/Mozart,_Wolfgang_Amadeus/) (complete, 18 sonatas): 
+    originating from ['The Annotated Mozart Sonatas' corpus](https://github.com/DCMLab/mozart_piano_sonatas).
+  - Several collections including the 
+    [Chopin Mazurkas](/Corpus/Keyboard_Other/Chopin,_Frédéric/Mazurkas) (56 works):
+    originating from DCML's ['romantic_piano_corpus'](https://github.com/DCMLab/romantic_piano_corpus).
 - krn format (with thanks to [@napulen](https://github.com/napulen)):
-  - 27 sets of keyboard Variations by [Mozart,_Wolfgang_Amadeus](/Corpus/Variations_and_Grounds/Mozart,_Wolfgang_Amadeus/) and [Beethoven](/Corpus/Variations_and_Grounds/Beethoven,_Ludwig_van/), from [Devaney et al.'s 'TAVERN' project, ISMIR 2015](https://github.com/jcdevaney/TAVERN)
-  - [Haydn Op. 20 String Quartets](/Corpus/Quartets/Haydn,_Franz_Joseph/): Complete annotations of Haydn's Op. 20 (6 string quartets, 24 movements), from the [MTG dataset](https://zenodo.org/record/1095630#.X8AbrcJyZhE)
-  - [Key Modulations and Tonicizations](Corpus/Textbooks/): Modulation examples annotated from five music theory textbooks. Published in [Nápoles López et al. 2020](https://dl.acm.org/doi/10.1145/3424911.3425515).
+  - 27 sets of keyboard Variations by 
+    [Mozart,_Wolfgang_Amadeus](/Corpus/Variations_and_Grounds/Mozart,_Wolfgang_Amadeus/) and 
+    [Beethoven](/Corpus/Variations_and_Grounds/Beethoven,_Ludwig_van/), from 
+    [The 'TAVERN' project, (Devaney et al. ISMIR 2015)](https://github.com/jcdevaney/TAVERN)
+  - [Haydn Op. 20 String Quartets](/Corpus/Quartets/Haydn,_Franz_Joseph/): 
+    Complete annotations of Haydn's Op. 20 (6 string quartets, 24 movements), from the  
+    [MTG dataset](https://zenodo.org/record/1095630#.X8AbrcJyZhE)
+  - [Key Modulations and Tonicizations](Corpus/Textbooks/): Modulation examples annotated from 
+    five music theory textbooks.
+    Published in [Nápoles López et al. 2020](https://dl.acm.org/doi/10.1145/3424911.3425515).
 - other:
-  - [Beethoven Piano Sonata](/Corpus/Piano_Sonatas/Beethoven,_Ludwig_van/) (complete first movements, 32 movements), from Tsung-Ping Chen and Li Su's ['BPS-FH' dataset, ISMIR 2018](https://github.com/Tsung-Ping/functional-harmony).
+  - [Beethoven Piano Sonata](/Corpus/Piano_Sonatas/Beethoven,_Ludwig_van/) 
+    (complete first movements, 32 movements), from Tsung-Ping Chen and Li Su's
+    ['BPS-FH' dataset, ISMIR 2018](https://github.com/Tsung-Ping/functional-harmony).
 
+Analyses originally in the 'RomanText' format (no conversion needed), 
+analysed by Dmitri Tymoczko and colleagues, and forming part of the supplementary to Tymoczko's 
+forthcoming "TAOM", include:
+- [Monteverdi madrigals](/Corpus/Early_Choral/Monteverdi,_Claudio/): Complete scores and 
+  analyses for books 3–5 of the Monteverdi madrigals (48 works) also to be seen in 
+  [this part](https://github.com/cuthbertLab/music21/tree/master/music21/corpus/monteverdi)  
+  of the music21 corpus (but updated since that version).
+- [Bach Chorales](/Corpus/Early_Choral/Bach,_Johann_Sebastian/Chorales): 371 chorales, of which 
+  a subset of 20 was first released on music21.
+- Several further collections including a second set of analyses for most of the  
+  [ChopinMazurkas](/Corpus/Keyboard_Other/Chopin,_Frédéric/Mazurkas)
 
-Originally in the 'RomanText' format (no conversion needed):
-- [Monteverdi madrigals](/Corpus/Early_Choral/Monteverdi,_Claudio/): Complete scores and analyses for books 3–5 of the Monteverdi madrigals (48 works), from [this part](https://github.com/cuthbertLab/music21/tree/master/music21/corpus/monteverdi) of the music21 corpus (but updated since that version).
-- [Bach Chorales](/Corpus/Early_Choral/Bach,_Johann_Sebastian/Chorales): the sample of 20 analyses in [this part](https://github.com/cuthbertLab/music21/tree/master/music21/corpus/bach/choraleAnalyses) of the music21 corpus.
+### Mixed sources
 
+Several corpora have full or partial coverage from more than one source.
+The most complex case is the 
+the [Beethoven Piano Sonata](/Corpus/Piano_Sonatas/Beethoven,_Ludwig_van/) collection
+for which there are 3 external corpora, all of them incomplete:
+1. 64 movements from DCML's 
+   ['romantic_piano_corpus'](https://github.com/DCMLab/romantic_piano_corpus).
+2. 36 movements from Dmitri Tymoczko's TAOM collection
+3. 32 movements (complete first movements) as converted from the  
+  ['BPS-FH' dataset, ISMIR 2018](https://github.com/Tsung-Ping/functional-harmony).
+
+There is not yet a single source for this collection.
+Are you tempted to attempt that?
+Do get in touch?
 
 ### New corpora by MG and colleagues
-- [Bach Preludes](/Corpus/Etudes_and_Preludes/Bach,_Johann_Sebastian/The_Well-Tempered_Clavier_I/): Complete preludes from the first book of Bach's Well Tempered Clavier (24 analyses)
+- [Bach Preludes](/Corpus/Etudes_and_Preludes/Bach,_Johann_Sebastian/The_Well-Tempered_Clavier_I/):
+  Complete preludes from the first book of Bach's Well Tempered Clavier (24 analyses)
 - [Ground bass works](/Corpus/Variations_and_Grounds/) by Bach and Purcell.
-- [Nineteenth-century songs](/Corpus/OpenScore-LiederCorpus/): A sample of songs from the OpenScore / 'Scores of Scores' lieder corpus ([mirroring the public-facing score collection hosted here](https://musescore.com/openscore-lieder-corpus/sets)), including analyses for the complete [_Winterreise_](/Corpus/OpenScore-LiederCorpus/Schubert,_Franz/Winterreise,_D.911/) and [_Schwanengesang_](/Corpus/OpenScore-LiederCorpus/Schubert,_Franz/Schwanengesang,_D.957/) cycles (Schubert), [_Dichterliebe_](/Corpus/OpenScore-LiederCorpus/Schumann,_Robert/Dichterliebe,_Op.48/) (Schumann), and many of the songs by women composers that constitute a key part of and motivation for that collection.
+- [Nineteenth-century songs](/Corpus/OpenScore-LiederCorpus/): A sample of songs from the 
+  OpenScore / 'Scores of Scores' lieder corpus  
+  ([mirroring the public-facing score collection hosted here](https://musescore.
+  com/openscore-lieder-corpus/sets)), including analyses for the complete
+  [_Winterreise_](/Corpus/OpenScore-LiederCorpus/Schubert,_Franz/Winterreise,_D.911/) and  
+  [_Schwanengesang_](/Corpus/OpenScore-LiederCorpus/Schubert,_Franz/Schwanengesang,_D.957/) cycles (Schubert),  
+  [_Dichterliebe_](/Corpus/OpenScore-LiederCorpus/Schumann,_Robert/Dichterliebe,_Op.48/) (Schumann), 
+- and many of the songs by women composers that constitute a key part of and motivation for that collection.
 
 ## Code and Lists
 
 For developers, please see the individual code files for details of what they do and how.
+
+Run code scripts from the repo's base directory (`When-in-Rome`) using the format:
+
+`>>> python3 -m Code.<name_of_file>`
+
+For example, this is the syntax for processing one score (feedback, slices, etc.):
+
+`>>> python3 -m Code.updates_and_checks --process_one_score OpenScore-LiederCorpus/Bonis,
+_Mel/_/Allons_prier!`
+
 Briefly, this repo. includes:
 - [The Roman Umpire](/Code/romanUmpire.py) for providing automatic 'feedback' files.
 It takes in a harmonic analysis and the corresponding score to assess how well they match.
 [Working in Harmony](https://fourscoreandmore.org/working-in-harmony/analysis/) is an initial attempt at an interactive app for making use of this code online (no downloads, coding, dependency).
 - [Anthology](/Code/anthology.py) for retrieving instances of specific chords and progression from the analyses.
-- [Pitch_profile](/Code/Pitch_profiles/) for producing the profile and feature information discussed above.
+- [Pitch_profile](/Code/Pitch_profiles) for producing the profile and feature information discussed above.
 
-## Licence, Acknowledging, Contribution
+Here are a couple of example of what all that can lead to:
+
+A histogram of augmented chord usage in the lieder corpus ...
+![histogram of augmented chord usage in the lieder corpus](https://github.com/MarkGotham/When-in-Rome/blob/master/Anthology/OpenScore-LiederCorpus/Augmented%20Sixths.pdf?raw=true)
+
+... and a histogram of fifth progression types across corpora:
+![histogram of fifth progressions across corpora](https://github.com/MarkGotham/When-in-Rome/blob/master/Anthology/multi_corpus_plot_count_example.pdf?raw=true)
+
+## Licence, Citation, Contribution
 
 ### Licence
 
-New content in this repository, including the new analyses, most code, and the conversion (specifically) of existing analyses is available under the [CC BY-SA licence](https://creativecommons.org/licenses/by-sa/3.0/).
-The [Roman Umpire](Code/romanUmpire.py) and [Anthology](Code/anthology.py) scripts are subject to the slightly more restrictive [CC BY-NC](https://creativecommons.org/licenses/by-nc/3.0/).
-If you wish to use these scripts in a commercial context then please get in touch to discuss your plans.
+New content in this repository, including the new analyses, code, and the conversion 
+(specifically) of existing analyses is available under the
+[CC BY-SA licence](https://creativecommons.org/licenses/by-sa/4.0/) (a free culture licence)
+except by arrangement.
+Please get in touch with requests for special permission.
 
-For analyses that originated elsewhere and have been converted into the format used here, please refer to the original source for licence.
-Links are provided to those original sources throughout the repository including the itemised list above and within every `analysis.txt` file.
+For analyses that originated elsewhere and have been converted into the format used here,
+please refer to the original source for licence.
+Links are provided to those original sources throughout the repository including the 
+itemised list above and within every `analysis.txt` file.
 
-For research and other public-facing projects making use of this work, please cite or otherwise acknowledge one or more of the papers listed below as appropriate to your project.
+These external licences vary.
+As far as we can tell, all the content here is either original to this repo,  
+or properly credited and fair to use in this way.
+If you think you see an issue please let us know.
+Again, if you are simply looking for a scores in a maximally permissive licence, then head to the 
+[OpenScore collections](https://github.com/openscore) which are notable for using CC0.
 
-### Citeable Papers
+For research and other public-facing projects making use of this work, 
+please cite or otherwise acknowledge one or more of the papers listed below as appropriate to your project.
+
+### Citation
 
 The materials provided in this repo includes supplementary resources promised in:
 - [Dmitri Tymoczko, Mark Gotham, Michael Scott Cuthbert, Christopher Ariza. “The Romantext Format: a Flexible and Standard Method for Representing Roman Numeral Analyses”, 20th International Society for Music Information Retrieval Conference, Delft, The Netherlands, 2019.](http://archives.ismir.net/ismir2019/paper/000012.pdf )
@@ -170,29 +292,10 @@ Please feel free to re-analyse these works by using the existing analysis as a t
 - For more thoroughly divergent analyses, a new file may be warranted. In that case, perhaps credit the original analyst too in the format - `Analyst: [Your name] after [their name]`
 - For any cases of clear errors, please submit a pull request with the correction.
 
-For details of the RomanText format used to encode analyses here, see our [technical specification paper](http://archives.ismir.net/ismir2019/paper/000012.pdf) or the relevant corners of the music21's [code](https://github.com/cuthbertLab/music21/tree/master/music21/romanText), [module reference](http://web.web.mit.edu/music21/doc/moduleReference/moduleRoman.html), or (if in doubt) [user guide](http://web.mit.edu/music21/doc/usersGuide/usersGuide_23_romanNumerals.html)
-
-### Spotlight on 6^ and 7^ in minor mode
-
-This is one aspect of roman numeral analysis that is particularly liable to inconsistency and in need of a clear protocol.
-Here, we follow the music21 default of 'quality', which is among four supported options:
-- Quality: the status of the triad as major or minor (upper or lower case, not accounting for diminished / augmented at this stage) alters the output chord’s root. In this case, ‘vii’ in a minor returns g# minor and the same holds for a diminished alteration (’viio’ = g# diminished). ‘VII’ sets the root to G natural, so ‘VII’ = G major and VII+ is G augmented.
-- Cautionary: like 'quality', except that the ‘cautionary’ option ignores one chromatic alteration in the ‘sensible’ direction. So, ‘#vii’ would return g# minor, and not g## minor. Likewise, ‘bVII’ would be G major and not Gb major. This is useful to accommodating cases much of the realistic variation in minor mode conventions — the single, ‘sensible' sharp or flat is like a ‘cautionary accidental’. Further sharps and flats in the ‘sensible’ direction, and any sharps / flats in the opposite direction do change the root.
-- Sharp / Raised: explicitly sets the 6th and / or 7th degrees to ‘Sharp / Raised’ (F# and G# in a minor).
-- Flat / Lowered: the same for flatten / lowered roots (F and G in a minor).
-
-The following tables set out how these options relate to each other in a minor. The first moves in a logical direction for  sharp / flat direction modifications. The second sets out the opposite direction, largely for the sake of completeness.
-
-|“Right” direction|##vii|#vii|vii|VII|bVII|bbVII|
-|---|---|---|---|---|---|---|
-|Quality|g###|g##|g#|G|Gb|Gbb|
-|Cautionary|g##|g#|g#|G|G|Gb|
-|Sharp / Raised|g###|g##|g#|G#|G|Gb|
-|Flat / Lowered|g##|g#|g|G|Gb|Gbb|
-
-|“Wrong” direction|bbvii|bvii|vii|VII|VII#|VII##|
-|---|---|---|---|---|---|---|
-|Quality|gb|g|g#|G|G#|G##|
-|Cautionary|gb|g|g#|G|G#|G##|
-|Sharp / Raised|gb|g|g#|G#|G##|G###|
-|Flat / Lowered|gbb|gb|g|G|G#|G##|
+For more details of the RomanText format used to encode analyses here, see:
+- the [technical specification paper](http://archives.ismir.net/ismir2019/paper/000012.pdf), or 
+- the relevant corners of the music21's
+  - [code](https://github.com/cuthbertLab/music21/tree/master/music21/romanText),
+  - [module reference](http://web.web.mit.edu/music21/doc/moduleReference/moduleRoman.html), or 
+  - (if in doubt) [user guide](http://web.mit.edu/music21/doc/usersGuide/usersGuide_23_romanNumerals.html)
+- this repository's own ["quick start" guide to writing in RomanText](syntax.md).

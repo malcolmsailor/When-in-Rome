@@ -1,14 +1,14 @@
-Composer: Beethoven
-Title: String quartet Op. 59 No. 3, Movement 2
-Analyst: Neuwirth et al. ABC dataset. See https://github.com/DCMLab/ABC
-Proofreader: 
+Composer: Beethoven, Ludwig van
+Title: n09op59-3_02
+Analyst: DCML members and contributors. Licence CC-BY-NC-SA. This file is automatically converted from https://raw.githubusercontent.com/DCMLab/ABC/harmonies/n09op59-3_02.tsv
+Proofreader: Please refer to that source repository for full details.
 
 Time Signature: 6/8
 m1 a: i64
 m2 V b2 V7
 m3 i64 b2 V7
 m4 i64 b2 V7
-m5 i
+m5a i
 m7 i
 m9 III b2 V7/VI
 m10 VI[no3][add9][add4] b1.33 VI b2 V7/iv
@@ -23,8 +23,8 @@ m18 V b2 #viio2 b2.67 #viio43
 m19 i6 b1.67 VI b2 iv7 b2.67 V
 m20 #viio2 b2.67 #viio7
 m21 i b1.67 iv6 b2 iv7 b2.67 V
-m22 i
-m23 i64 b1.67 i b2 #viio b2.33 i b2.67 i64
+m22a i
+m23a i64 b1.67 i b2 #viio b2.33 i b2.67 i64
 m24 b1.67 i b2 #viio
 m25 i64 b1.67 i b2 #viio b2.67 i64
 m26 b1.67 i b2 #viio

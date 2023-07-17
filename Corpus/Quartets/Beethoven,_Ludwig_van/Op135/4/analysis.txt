@@ -1,7 +1,7 @@
-Composer: Beethoven
-Title: String quartet Op. 135, Movement 4
-Analyst: Neuwirth et al. ABC dataset. See https://github.com/DCMLab/ABC
-Proofreader: 
+Composer: Beethoven, Ludwig van
+Title: n16op135_04
+Analyst: DCML members and contributors. Licence CC-BY-NC-SA. This file is automatically converted from https://raw.githubusercontent.com/DCMLab/ABC/harmonies/n16op135_04.tsv
+Proofreader: Please refer to that source repository for full details.
 
 Time Signature: 3/2
 m1 f: #viio6 b2 i6
@@ -79,11 +79,11 @@ m76 IV b3 I b4 I6
 m77 V7 b3 V43
 m78 I6 b3 I
 m79 Cad64 b3 V7
-m80 I b4 I64
-m81 b3 #vo7
-m82 b4 F: I
-m83 V b3 V6
-m84 A: I b4 vi
+m80a I b4 I64
+m81a b3 #vo7
+m82a b4 F: I
+m83a V b3 V6
+m84a A: I b4 vi
 m85 Cad64 b3 V b4 V43
 m87 C: I
 m88 iii
@@ -102,7 +102,7 @@ m101 V[add9]/IV b3 V2/IV
 m102 V43/IV b3 V2/IV
 m103 b3 F: I6 b4 V43
 m104 I b3 I6 b4 vi64
-m105 V/vi b3 db: #viio b4 #viio2
+m105 V/vi b3 d: #viio b4 #viio2
 m106 i64 b2 iio6 b3 i6
 m107 VI[no3][add#2] b2 VI b3 V b4 #viio43
 m108 i6 b2 iv[add9] b3 i6 b4 V43
@@ -110,7 +110,7 @@ m109 i b3 V[no5][add6] b4 V7
 m110 VI[no5][no3][add6][add4][add2] b2 VI b3 iio6 b4 iv7[add2]
 m111 VI[no5][no3][add6][add4][add#2] b2 VI b3 iio6 b4 iv7
 m112 V7[addb2] b2 Cad64 b3 V7
-m113 I b3 Db: I
+m113 I b3 D: I
 m114 I b3 viiø7
 m115 vi b3 V b4 #ivø7
 m116 V b4 V7
@@ -198,7 +198,7 @@ m197 viio6/IV
 m198 IV
 m199 I64 b3 IV6
 m200 ii6 b2 ii b3 V/vi
-m204 Db: I b3 V7/IV b4 IV64
+m204 D: I b3 V7/IV b4 IV64
 m205 I b3 V2[no3][add4]/IV b4 V2/IV
 m206 b3 IV6
 m207 IV b3 IV6
@@ -240,8 +240,8 @@ m243 ii b3 I b4 I6
 m244 V7 b3 V43[add2]
 m245 I6 b3 I
 m246 Cad64 b3 V7
-m247 I
-m248 I b4 I+64
+m247a I
+m248a I b4 I+64
 m249 V6/vi b3 #viio7/vi
 m250 b4 IV+64
 m251 V6/ii b3 V6[add6]/ii

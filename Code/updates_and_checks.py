@@ -1,258 +1,219 @@
 # -*- coding: utf-8 -*-
 """
+NAME:
 ===============================
 Updates and Checks (updates_and_checks.py)
+
+BY:
 ===============================
-
-Mark Gotham, 2020-
-
+Mark Gotham
 
 LICENCE:
 ===============================
-
 Creative Commons Attribution-ShareAlike 4.0 International License
 https://creativecommons.org/licenses/by-sa/4.0/
 
-
 ABOUT:
 ===============================
-
-Functions for updating entries to the 'When in Rome' corpus of harmonic analyses, notably:
-- copying, moving, converting scores and analyses;
-- creating 'slices' and 'template' files (from the score)
-- producing 'feedback' and 'analysis_on_score' files (from a score and analysis pair)
+Functions for updating entries to the "When in Rome" corpus of harmonic analyses, notably:
+- creating "slices" and "template" files (from the score)
+- producing "feedback" and "analysis_on_score" files (from a score and analysis pair)
 - various checks.
-
-See also 'contents.py' for updating corpus contents lists.
+See also "contents.py" for updating corpus contents lists.
 
 """
 
 # ------------------------------------------------------------------------------
 
-import json
 import os
-import re
 import shutil
 
-from pathlib import PurePath
-from typing import Optional, Union
+from pathlib import Path
 
-import romanUmpire
+from . import romanUmpire
+from . import CORPUS_FOLDER
+from . import get_corpus_files
 
-from music21 import converter, metadata, stream, romanText
-
-# ------------------------------------------------------------------------------
-
-corpora = [
-    'Orchestral',
-    'Early_Choral',
-    'Etudes_and_Preludes',
-    'OpenScore-LiederCorpus',
-    'Piano_Sonatas',
-    'Quartets',
-    'Variations_and_Grounds'
-]
+from music21 import bar, converter, romanText, stream
 
 
 # ------------------------------------------------------------------------------
 
-# Get file lists
-
-def get_corpus_files(corpus: str = 'OpenScore-LiederCorpus',
-                     file_name: Optional[str] = '',
-                     name_end: Optional[str] = ''
-                     ) -> list:
-    '''
-    Get and return paths to files matching conditions for either
-    the whole file name (file_name) or only the end (extension or otherwise).
-    If the entire file name is specified, end is ignored.
-    :param corpus: the sub-corpus to search over. Empty string ('') to run all corpora.
-    :param file_name: a full file name (optional)
-    :param name_end: the end of the file name (file extension or otherwise, optional)
-    :return: list of file paths.
-    '''
-
-    if corpus != '' and corpus not in corpora:
-        raise ValueError(f"Invalid corpus: must be one of {corpora} or an empty string (for all)")
-
-    base_path = os.path.join(os.path.dirname((os.path.realpath(__file__))), '..', 'Corpus', corpus)
-
-    paths = []
-
-    for dpath, dname, fname in os.walk(base_path):
-        for name in fname:
-            if file_name:
-                if name == file_name:
-                    paths.append(str(os.path.join(dpath, name)))
-            elif name_end:  # ignored if search on whole file name
-                if name.endswith(name_end):
-                    paths.append(str(os.path.join(dpath, name)))
-
-    return paths
-
-
-def get_analyses(corpus: str = 'OpenScore-LiederCorpus',
-                 all_versions: bool = True
-                 ) -> list:
+def get_analyses(
+        corpus: Path = CORPUS_FOLDER,
+        all_versions: bool = True
+) -> list:
     """
     Get analysis files across a corpus.
     (I.e., Convenience function for `get_corpus_files` on analyses.)
 
-    :param corpus:
-    :param all_versions: If True, get all analysis files ('analysis*txt'); if false, only get the
-    'analysis.txt' files.
+    :param corpus: the sub-corpus to run. Leave blank to run all corpora.
+    :param all_versions: If True, get all analysis files ("analysis*txt"); if false, only get the
+    "analysis.txt" files.
     :return: list of file paths.
     """
 
-    f = 'analysis.txt'
+    f = "analysis.txt"
     if all_versions:
-        f = 'analysis*txt'
-    return get_corpus_files(corpus=corpus, file_name=f)
+        f = "analysis*txt"
+    return get_corpus_files(sub_corpus_path=corpus, file_name=f)
 
 
-def clear_the_decks(corpus: str = '',
-                    fileTypeToStay = ['analysis.txt', 'analysis_automatic.rntxt', 'score.mxl'],
-                    fileTypeToGo: list = ['analysis_on_score.mxl', 'slices.tsv',],
-                    delete: bool = True
-                    ) -> list:
+def rename_analyses(corpus: Path = CORPUS_FOLDER,
+                    name_before: str = "analysis.txt",
+                    name_after: str = "analysis_with_name.txt",
+                    ) -> None:
+    f = get_corpus_files(corpus, name_before)
+    for file in f:
+        shutil.move(file, file.parent / name_after)
+
+
+def clear_the_decks(
+        corpus: Path = CORPUS_FOLDER,
+        file_types=None,
+        delete: bool = True
+) -> list:
     """
-    When in Rome now supports many variant subsidiary files 
+    When in Rome now supports many variant subsidiary files
     but does not include them by default.
     Having created them, use this to reset (delete).
-    
-    :param corpus:
-    :param fileTypeToStay: Which file types we definitely keep.
-    :param fileTypeToGo: Which file types that definitely go.
-    :param delete: Bool. Delete or just report by printing to log.
-    :return: files not accounted for the explicit lists of those to keep and those to remove.
+
+    :param corpus: the sub-corpus to run. Leave blank to run all corpora.
+    :param file_types: Which file types to delete or mark for deletion.
+    :param delete: Bool. Delete or just report by returning the list.
+    :return: list of the marked files.
     """
 
-    miscellany = []
-    filesToGo = []
-    
-    for g in fileTypeToGo:
-        filesToGo += get_corpus_files(corpus=corpus, file_name=g)
-    
-    for f in filesToGo:
-        print('Removing: ', f)
+    if file_types is None:
+        file_types = ["analysis_on_score.mxl", "slices.tsv", ]
+
+    to_go = []
+
+    for g in file_types:
+        to_go += get_corpus_files(sub_corpus_path=corpus, file_name=g)
+
+    for f in to_go:
         if delete:
+            print("Removing: ", f)
             os.remove(f)
-            
-    for s in fileTypeToStay:
-        miscellany += get_corpus_files(corpus=corpus, file_name=g)
-    
-    return miscellany
+
+    return to_go
 
 
 # ------------------------------------------------------------------------------
 
 # Roman Umpire
 
-def process_one_score(path_to_score: str,
-                      path_to_analysis,  # NB 'On Score' option
-                      write_path: str,
-                      combine: bool = True,
-                      slices: bool = True,
-                      feedback: bool = True,
-                      overwrite: bool = False):
+def process_one_score(
+        path_to_score: str | os.PathLike,
+        path_to_analysis: str | os.PathLike | None = None,
+        write_path: str | os.PathLike | None = None,
+        combine: bool = True,
+        slices: bool = True,
+        feedback: bool = True,
+        overwrite: bool = False
+) -> None:
     """
     Processes one score to produce any or all of the following files:
-    'analysis_on_score' (score files with analysis added in musical notation),
-    'slices_with_analysis' (tsv representation that's a valid input for the Roman umpire and
+    "analysis_on_score" (score files with analysis added in musical notation),
+    "slices_with_analysis" (tsv representation that is a valid input for the Roman umpire and
     quicker to parse than musicXML), and
-    'feedback' (txt written feedback on the score-analysis match).
+    "feedback" (txt written feedback on the score-analysis match).
 
-    :param path_to_score:
-    :param path_to_analysis: a string as path, or simply 'On score' *** (see romanUmpire).
+    :param path_to_score: path to a file or simply the string
+    :param path_to_analysis: path to a file or simply the string "On score" *** (see romanUmpire).
     :param write_path: where to write any new files to.
     :param combine: create an `analysis_on_score` file with the two combined.
-    :param slices: create a 'slices.tsv' representation.
+    :param slices: create a "slices.tsv" representation.
     :param feedback: produce feedback on how the analysis matches the score (write to .txt)
-    :param overwrite: if False and the file type already exists, don't replace it.
+    :param overwrite: if False and the file type already exists, don"t replace it.
     """
 
     if (not combine) and (not slices) and (not feedback):
-        print('No action requested: set at least one of combine, slices, or feedback to true.')
+        print("No action requested: set at least one of combine, slices, or feedback to true.")
         return
 
-    t = romanUmpire.ScoreAndAnalysis(path_to_score,
+    if Path(path_to_score).exists():
+        path_to_score = Path(path_to_score)
+        if not path_to_score.is_relative_to(CORPUS_FOLDER):
+            raise ValueError("The `path_to_score` argument must be within the corpus")
+    elif (CORPUS_FOLDER / path_to_score).exists():
+        path_to_score = CORPUS_FOLDER / path_to_score
+    else:
+        raise ValueError("The `path_to_score` argument is invalid.")
+
+    if path_to_analysis is None:
+        path_to_analysis = path_to_score
+    if write_path is None:
+        write_path = path_to_score
+
+    t = romanUmpire.ScoreAndAnalysis(path_to_score / "score.mxl",
                                      analysisLocation=path_to_analysis)
 
-    stopping_message = 'file exists and overwrite set to False. Stopping'
+    stopping_message = "file exists and overwrite set to False. Stopping"
 
     if combine:
-        if overwrite:
+        if overwrite or not (Path(write_path) / "analysis_on_score.mxl").exists():
             t.writeScoreWithAnalysis(outPath=write_path,
-                                     outFile='analysis_on_score')
+                                     outFile="analysis_on_score")
         else:
-            hypothetical_path = os.path.join(path_to_score, 'analysis_on_score.mxl')
-            if os.path.exists(hypothetical_path):
-                print('analysis_on_score ' + stopping_message)
-            else:
-                t.writeScoreWithAnalysis(outPath=write_path,
-                                         outFile='analysis_on_score')
+            print("analysis_on_score " + stopping_message)
 
     if slices:
         t.matchUp()  # Sic, necessary here and only here
-        if overwrite:
+        if overwrite or not (Path(write_path) / "slices_with_analysis.tsv").exists():
             t.writeSlicesFromScore(outPath=write_path,
-                                   outFile='slices_with_analysis')
+                                   outFile="slices_with_analysis")
         else:
-            hypothetical_path = os.path.join(path_to_score, 'slices_with_analysis.tsv')
-            if os.path.exists(hypothetical_path):
-                print('slices_with_analysis ' + stopping_message)
-            else:
-                t.writeSlicesFromScore(outPath=write_path,
-                                       outFile='slices_with_analysis')
+            print("slices_with_analysis " + stopping_message)
 
     if feedback:
-        if overwrite:
+        if overwrite or not (Path(write_path) / "feedback_on_analysis.txt").exists():
             t.printFeedback(outPath=write_path,
-                            outFile='feedback_on_analysis')
+                            outFile="feedback_on_analysis")
         else:
-            hypothetical_path = os.path.join(path_to_score, 'feedback_on_analysis.txt')
-            if os.path.exists(hypothetical_path):
-                print('feedback_on_analysis ' + stopping_message)
-            else:
-                t.printFeedback(outPath=write_path,
-                                outFile='feedback_on_analysis')
+            print("feedback_on_analysis " + stopping_message)
 
 
-def process_corpus(corpus: str = 'OpenScore-LiederCorpus',
-                   combine: bool = True,
-                   slices: bool = True,
-                   feedback: bool = True,
-                   overwrite: bool = False):
+def process_corpus(
+        corpus_name: str = "OpenScore-LiederCorpus",
+        combine: bool = True,
+        slices: bool = True,
+        feedback: bool = True,
+        overwrite: bool = False
+) -> None:
     """
     Corpus wide implementation of `process_one_score`. See docs there.
     """
-    files = get_corpus_files(corpus=corpus,
-                             file_name='analysis.txt')
+    analysis_paths = get_corpus_files(sub_corpus_path=CORPUS_FOLDER / corpus_name,
+                                      file_name="analysis.txt")
 
-    for path_to_analysis in files:
-        pth = path_to_analysis[:-len("analysis.txt")]
-        print(pth)
-        analysis_exist = os.path.exists(pth + "analysis_on_score.mxl")
-        if overwrite or (not analysis_exist):
+    for p in analysis_paths:
+        pth_to_dir = p.parent
+        print("Processing: ", pth_to_dir)
+        already_exist = (Path(pth_to_dir) / "analysis_on_score.mxl").exists()
+        if overwrite or (not already_exist):
             try:
-                process_one_score(os.path.join(pth, 'score.mxl'),
-                                  path_to_analysis,  # i.e. with 'analysis'
-                                  pth,
+                process_one_score(pth_to_dir,
                                   combine=combine,
                                   slices=slices,
-                                  feedback=feedback)
-            except:
-                print(f'Error with: {pth}')
+                                  feedback=feedback,
+                                  overwrite=overwrite)
+                print("... done.")
+            except Exception as e:
+                print(f"... error: {e}")
 
 
 # ------------------------------------------------------------------------------
 
 # Automated analyses from augmentednet
 
-def make_automated_analyses(corpus: str = 'OpenScore-LiederCorpus') -> None:
+def make_automated_analyses(
+        corpus: Path = CORPUS_FOLDER
+) -> None:
     """
     Create automated analyses using augmentednet (Nápoles López et al. 2021).
-    :param corpus: Which corpus (or all). See notes at `get_corpus_files`
+    :param corpus: the sub-corpus to run. Leave blank to run all corpora.
     :return: None
 
     TODO: untested draft based on (adapted from) https://github.com/MarkGotham/When-in-Rome/pull/47
@@ -266,8 +227,8 @@ def make_automated_analyses(corpus: str = 'OpenScore-LiederCorpus') -> None:
     modelPath = "AugmentedNet.hdf5"
     model = keras.models.load_model(modelPath)
 
-    files = get_corpus_files(corpus=corpus,
-                             file_name='score.mxl')
+    files = get_corpus_files(sub_corpus_path=corpus,
+                             file_name="score.mxl")
 
     for path in files:
         pathrntxt = path.replace(".mxl", "_annotated.rntxt")
@@ -293,208 +254,45 @@ def make_automated_analyses(corpus: str = 'OpenScore-LiederCorpus') -> None:
 
 # ------------------------------------------------------------------------------
 
-# Get, convert, move scores and analyses
-
-def convert_musescore_score_corpus(in_path: Union[str, os.PathLike],
-                                   out_path: Union[str, os.PathLike],
-                                   corpus_name: str = 'mozart_piano_sonatas',
-                                   in_format: str = '.mscx',
-                                   out_format: str = '.mxl',
-                                   write: bool = True,
-                                   ) -> list:
-    """
-    Basic script for creating or updating a
-    `<corpus_name>_corpus_conversion.json` file with 
-    the latest contents of the corpus so that it can be used 
-    for batch conversion of 
-    musescore files (mscx or mscz) 
-    to mxl or other fileformat.
-
-    Specifically, set up to map from DCML conventions 
-    e.g., in the mozart_piano_sonatas from `/K279-1.mscx` into 
-    local convention for subfolders `/K279/1/score.mxl`.
-
-    Implement the batch conversion of one such file
-    e.g., `corpus_conversion.json`
-    from this folder with the command:
-    >>> mscore -j corpus_conversion.json
-
-    For information about `mscore` and a within-app plugin alternative, see
-    https://musescore.org/en/handbook/3/command-line-options#Run_a_batch_job_converting_multiple_documents
-
-    Possible TODO:
-    Consider running directly from URL (i.e., not a local copy), e.g., ...
-    https://raw.githubusercontent.com/DCMLab/mozart_piano_sonatas/main/scores/K279-1.mscx
-    ... though this doesn't seem to be supported by mscore.    
-    """
-
-    valid_formats = ['.mscx', '.mscz', '.mxl', '.pdf', '.mid']
-    if in_format not in valid_formats:
-        raise ValueError(f"Invalid in_format: must be one of {valid_formats}")
-    if out_format not in valid_formats:
-        raise ValueError(f"Invalid out_format: must be one of {valid_formats}")
-
-    valid_corpora = ['ABC', 'mozart_piano_sonatas']
-    if corpus_name not in valid_corpora:
-        raise ValueError(f"Invalid in_format: must be one of {valid_corpora}")
-
-    out_data = []
-
-    for f in os.listdir(in_path):
-        if f.endswith(in_format):
-            if corpus_name == 'ABC':
-                g = f.split('op')[1]  # n01op18-1_01.mscx >>> 18-1_01.mscx
-                g = g.split('.')[0]  # 18-1_01.mscx >>> 18-1_01
-                cln, mvt = g.split('_')  # 18-1_01 >>> 18-1, 01
-                mvt = mvt[1]  # Remove DCML padding '01' >>> '1'. Never 10+ mvts
-                no = ''
-                if '-' in cln:  # Only if applicable. 18-1 >>> 18, 1
-                    cln, no = cln.split('-')
-                    no = 'No' + no  # No1
-                if len(cln) == 2:  # 18, 59 etc.
-                    cln = '0' + cln  # Add padding. Op100+ in collection.
-                cln = 'Op' + cln
-                if no:
-                    cln = '_'.join([cln, no])  # Op018_No1
-                mvt = mvt.split('.')[0]  # e.g.,  1.mcsx >>> 1
-                # Op18_No1
-            elif corpus_name == 'mozart_piano_sonatas':
-                cln, mvt = f.split('-')  # e.g., K279-1.mscx >>> K279, 1.mcsx
-                mvt = mvt.split('.')[0]  # e.g.,  1.mcsx >>> 1
-
-            # if not isdir, mkdir
-            cln_path = os.path.join(out_path, cln)
-            if not os.path.isdir(cln_path):
-                os.mkdir(cln_path)
-            mvt_path = os.path.join(cln_path, mvt)
-            if not os.path.isdir(mvt_path):
-                os.mkdir(mvt_path)
-
-            x = {'in': in_path + f,
-                 'out': str(mvt_path) + '/score' + out_format
-                 }
-
-            out_data.append(x)
-
-    if write:
-        out_path = os.path.join('.', corpus_name + '_corpus_conversion.json')
-        with open(out_path, 'w') as json_file:
-            json.dump(out_data, json_file)
-
-    return out_data
-
-
-def copy_DCML_tsv_analysis_files(in_path: Union[str, os.PathLike],
-                                 out_path: Union[str, os.PathLike],
-                                 corpus_name: str = 'mozart_piano_sonatas',
-                                 ) -> None:
-    """
-    Copy DCML's analysis files (.tsv) to the relevant
-    `working` folder of this repo.
-    
-    TODO: DRY - refactor with `convert_musescore_score_corpus`
-    """
-
-    valid_corpora = ['ABC', 'mozart_piano_sonatas']
-    if corpus_name not in valid_corpora:
-        raise ValueError(f"Invalid in_format: must be one of {valid_corpora}")
-
-    out_data = []
-
-    for f in os.listdir(in_path):
-        if f.endswith('.tsv'):
-            if corpus_name == 'ABC':
-                g = f.split('op')[1]  # n01op18-1_01.mscx >>> 18-1_01.mscx
-                g = g.split('.')[0]  # 18-1_01.mscx >>> 18-1_01
-                cln, mvt = g.split('_')  # 18-1_01 >>> 18-1, 01
-                mvt = mvt[1]  # Remove DCML padding '01' >>> '1'. Never 10+ mvts
-                no = ''
-                if '-' in cln:  # Only if applicable. 18-1 >>> 18, 1
-                    cln, no = cln.split('-')
-                    no = 'No' + no  # No1
-                if len(cln) == 2:  # 18, 59 etc.
-                    cln = '0' + cln  # Add padding. Op100+ in collection.
-                cln = 'Op' + cln
-                if no:
-                    cln = '_'.join([cln, no])  # Op018_No1
-                mvt = mvt.split('.')[0]  # e.g.,  1.mcsx >>> 1
-                # Op18_No1
-            elif corpus_name == 'mozart_piano_sonatas':
-                cln, mvt = f.split('-')  # e.g., K279-1.mscx >>> K279, 1.mcsx
-                mvt = mvt.split('.')[0]  # e.g.,  1.mcsx >>> 1
-
-            # if not isdir, mkdir
-            cln_path = os.path.join(out_path, cln)
-            if not os.path.isdir(cln_path):
-                os.mkdir(cln_path)
-            mvt_path = os.path.join(cln_path, mvt)
-            if not os.path.isdir(mvt_path):
-                os.mkdir(mvt_path)
-            working_path = os.path.join(mvt_path, 'Working')
-            if not os.path.isdir(working_path):
-                os.mkdir(working_path)
-                
-            print(f"Processing {working_path} ...", end="", flush=True)
-
-            shutil.copy(in_path + f,
-                        os.path.join(working_path, 'DCML_analysis.tsv')
-                        )
-            print(" done.")
-
-
-def convert_DCML_tsv_analyses(corpus: str = 'Quartets',
-                              # overwrite: bool = True
-                              ) -> None:
-    """
-    Convert local copies of DCML's analysis files (.tsv) to rntxt.
-    """
-
-    file_paths = get_corpus_files(corpus=corpus, file_name='DCML_analysis.tsv')
-
-    for f in file_paths:
-
-        new_dir = os.path.dirname(os.path.dirname(f))
-        out_path = os.path.join(new_dir, 'analysis.txt')
-        
-        path_parts = PurePath(os.path.realpath(new_dir)).parts
-        
-        genre, composer, opus, movement = path_parts[-4:]
-        genre = genre[:-1].replace('_', ' ')  # Cut plural 's'
-        composer = composer.replace('_', ' ')
-
-        work_str = genre  # Both cases
-        if 'Mozart' in composer:
-            work_str += f" {opus}"  # Straightforward K number, always 3 digits
-        elif 'Beethoven' in composer:
-            m = re.search(r"Op0*(?P<opus>\d+)(_No0?(?P<num>\d+))?", opus)
-            work_str += f" Op. {m.group('opus')}"
-            if m.group('num'):
-                work_str += f" No. {m.group('num')}"
-        work_str += f", Movement {movement}"  # Both cases
-        
-        print(f"Processing {out_path} ...", end="", flush=True)
-        analysis = romanText.tsvConverter.TsvHandler(f, dcml_version=2).toM21Stream()
-        analysis.insert(0, metadata.Metadata())
-        analysis.metadata.composer = composer
-        analysis.metadata.analyst = 'DCMLab. See https://github.com/DCMLab/'
-        analysis.metadata.title = work_str
-
-        # TODO overwrite / path exists check
-        converter.subConverters.ConverterRomanText().write(
-            analysis, 'romanText', fp=out_path
-        )
-        print(" done.")
-
-
-# ------------------------------------------------------------------------------
-
 # Checks
 
-def check_all_parse(corpus: str = 'OpenScore-LiederCorpus',
-                    analysis_not_score: bool = True,
-                    count_files: bool = True,
-                    count_rns: bool = True
-                    ) -> None:
+def repeats_are_valid(
+        score: stream.Score,
+        print_all: bool = True
+) -> None:
+    """
+    Quick and simple check that start and end repeats match up.
+    Specifically, iterates through the barlines on the highest part
+    and raises a value error in the case of:
+    two starts without an end,
+    or two ends without a start.
+    """
+    last_repeat = ""  # starting condition
+    for barline in score.parts[0].recurse().getElementsByClass(bar.Barline):
+        measure_num = barline.getContextByClass(stream.Measure).measureNumber
+        if str(barline) == str(bar.Repeat(direction="start")):
+            if print_all:
+                print(f"Start repeat in measure\t{measure_num}")
+            if last_repeat == "start":
+                raise ValueError(f"Second successive start repeat found in measure {measure_num}.")
+            else:
+                last_repeat = "start"
+        if str(barline) == str(bar.Repeat(direction="end")):
+            if print_all:
+                print(f"End repeat in measure\t{measure_num}")
+            if last_repeat == "end":
+                raise ValueError(f"Second successive end repeat found in measure {measure_num}.")
+            else:
+                last_repeat = "end"
+    return
+
+
+def check_all_parse(
+        corpus: Path = CORPUS_FOLDER,
+        analysis_not_score: bool = True,
+        count_files: bool = True,
+        count_rns: bool = True
+) -> None:
     """
     Check all files parse successfully
     (throws and error on the first case to fail if not).
@@ -503,40 +301,43 @@ def check_all_parse(corpus: str = 'OpenScore-LiederCorpus',
     Optionally count the number of files and (if analyses) also the Roman Numerals therein.
 
     :param analysis_not_score: If true, check analysis files; if false then scores.
-    :param corpus: the sub-corpus to search over. Leave blank ('') to run all corpora.
+    :param corpus: the sub-corpus to run. Leave blank to run all corpora.
     :param count_files: count+print the total number of analysis files (bool, optional).
     :param count_rns: count+print the total Roman numerals in all analysis files (bool, optional).
     """
 
     if analysis_not_score:
-        files = get_analyses(corpus=corpus)
+        files = get_analyses(corpus=corpus, all_versions=True)
     else:
-        files = get_corpus_files(corpus=corpus, file_name='score.mxl')
+        files = get_corpus_files(sub_corpus_path=corpus, file_name="score.mxl")
 
     if count_files:
-        print(f'{len(files)} files found ... now checking they all parse ...')
+        print(f"{len(files)} files found ... ")
+        distinct_works = set([x.parts[:-1] for x in files])
+        print(f"... on {len(distinct_works)} distinct works ...")
 
     rns = 0
 
     for f in files:
         if analysis_not_score:
             if count_rns:
-                a = converter.parse(f, format='romantext')
-                rns += len(a.getElementsByClass('RomanNumeral'))
+                a = converter.parse(f, format="romantext")
+                rns += len(a.getElementsByClass("RomanNumeral"))
             else:
-                converter.parse(f, format='romantext')
+                converter.parse(f, format="romantext")
         else:
             converter.parse(f)
 
-    print('All parse')
+    print("All parse")
 
     if analysis_not_score and count_rns:
-        print(f'{rns} total Roman Numerals.')
+        print(f"{rns} total Roman Numerals.")
 
 
-def anacrusis_number_error(p: stream.Part
-                           ) -> bool:
-    '''
+def anacrusis_number_error(
+        p: stream.Part
+) -> bool:
+    """
     Check whether anacrustic measures are numbered correctly in a part.
     If the first measure is incomplete (not equal in length to that of the stated time signature)
     then it should be numbered 0; if complete, it should be 1.
@@ -547,8 +348,8 @@ def anacrusis_number_error(p: stream.Part
 
     :param p: a music21.stream.Part, pre-parsed.
     :return: bool, True in the case of an error.
-    '''
-    msrs = p.getElementsByClass('Measure')
+    """
+    msrs = p.getElementsByClass("Measure")
     m = msrs[0]
 
     if m.measureNumber == 0 and m.duration == m.barDuration:
@@ -557,10 +358,11 @@ def anacrusis_number_error(p: stream.Part
         return True
 
 
-def find_incomplete_measures(part: stream.Part
-                             ) -> str:
-    '''
-    Finds cases of 'incomplete' measures as defined by a difference between the
+def find_incomplete_measures(
+        part: stream.Part
+) -> str:
+    """
+    Finds cases of "incomplete" measures as defined by a difference between the
     actual length of events in a measure and the nominal (time signature defined) length.
 
     False positives in cases like crossing staves (missing events)
@@ -568,8 +370,8 @@ def find_incomplete_measures(part: stream.Part
 
     :param part: a music21.stream.Part, pre-parsed
     :return: string with incomplete measure + first and last overall (not necessarily incomplete)
-    '''
-    msrs = part.getElementsByClass('Measure')
+    """
+    msrs = part.getElementsByClass("Measure")
     first = msrs[0].measureNumber
     last = msrs[-1].measureNumber
     incomplete = []
@@ -577,25 +379,26 @@ def find_incomplete_measures(part: stream.Part
         if m.duration != m.barDuration:  # i.e. actual length differs from nominal (ts) length
             incomplete.append(m.measureNumber)
 
-    return f'Incomplete: {incomplete}; first: {first}; last {last}'
+    return f"Incomplete: {incomplete}; first: {first}; last {last}"
 
 
-def find_incomplete_measures_corpus(corpus: str = 'OpenScore-LiederCorpus',
-                                    anacrusis_only: bool = True
-                                    ) -> dict:
+def find_incomplete_measures_corpus(
+        corpus: Path = CORPUS_FOLDER,
+        anacrusis_only: bool = True
+) -> dict:
     """
     Run `anacrusis_number_error` or `find_incomplete_measures` on a whole corpus.
-    :param corpus: the corpus to search (see get_corpus_files)
+    :param corpus: the sub-corpus to run. Leave blank to run all corpora.
     :param anacrusis_only: bool. If True, only consider the first measure
     (i.e., run `anacrusis_number_error`), otherwise run `find_incomplete_measures`.
     :return: dict with file names as the keys.
     """
 
     # NB: corpus validity check in get_corpus_files
-    files = get_corpus_files(corpus=corpus, file_name='score.mxl')
+    files = get_corpus_files(sub_corpus_path=corpus, file_name="score.mxl")
     out_dict = {}
     for file in files:
-        print(f'Test: {file}')
+        print(f"Test: {file}")
         try:
             score = converter.parse(file)
             if anacrusis_only:
@@ -603,15 +406,41 @@ def find_incomplete_measures_corpus(corpus: str = 'OpenScore-LiederCorpus',
             else:
                 out_dict[file] = find_incomplete_measures(score.parts[0])
         except:
-            print(f'Failed to parse {file}')
+            print(f"Failed to parse {file}")
 
     if anacrusis_only:
         titles = [x for x in out_dict if out_dict[x]]
         titles.sort()
-        print('ISSUES WITH:')
+        print("ISSUES WITH:")
         [print(x) for x in titles]
 
     return out_dict
+
+
+def retrieve_unprocessed(
+        s: stream.Score,
+        tag: str = "Form"
+) -> str:
+    """
+    Retrieve tagged but unprocessed information from a romanText file.
+
+    Note that this complements the processed metadata.Metadata information
+    which includes not only composer, title, etc.
+    but also the "analyst" and "proofreader".
+
+    Args:
+        s (stream.Score): only makes sense if this stream is a parsed romantext analysis.
+        tag (str): the tag to find. Defaults to "Form" for retrieving formal labels.
+        Other options include further analyst annotations ("Note").
+
+    Returns: str
+
+    """
+    unprocessed = s.recurse().getElementsByClass(romanText.translate.RomanTextUnprocessedMetadata)
+    for u in unprocessed:
+        if "tag" in u.__dict__:
+            if u.__dict__["tag"] == tag:
+                return u.__dict__["data"]
 
 
 # ------------------------------------------------------------------------------
@@ -622,12 +451,30 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--rebuild_DCML_ABC", action="store_true")
-    parser.add_argument("--rebuild_DCML_Mozart", action="store_true")
+
+    parser.add_argument("--process_one_score", action="store_true", )
+    parser.add_argument("--process_corpus", action="store_true", )
+    parser.add_argument("--check_all_parse", action="store_true", )
+    parser.add_argument("--anthology", action="store_true", )
+
+    parser.add_argument("--path_to_score", type=str,
+                        required=False,
+                        help="Path to score-analysis pair directory. "
+                             "This can be specified entirely to the CORPUS_FOLDER.")
+    parser.add_argument("--corpus", type=str,
+                        required=False,
+                        default="OpenScore-LiederCorpus",
+                        help="Process all cases within this corpus path.")
+
     args = parser.parse_args()
-    if args.rebuild_DCML_ABC:
-        convert_DCML_tsv_analyses(corpus = 'Quartets')
-    elif args.rebuild_DCML_Mozart:
-        convert_DCML_tsv_analyses(corpus = 'Piano_Sonatas')
+    if args.process_one_score:
+        process_one_score(path_to_score=args.path_to_score)
+    elif args.process_corpus:
+        process_corpus(corpus_name=args.corpus)
+    elif args.check_all_parse:
+        check_all_parse(corpus=args.corpus)
+    elif args.anthology:
+        from . import anthology
+        anthology.all_searches_one_corpus(corpus=args.corpus)
     else:
         parser.print_help()

@@ -10,8 +10,8 @@ Mark Gotham, 2019–20
 LICENCE:
 ===============================
 
-Creative Commons Attribution-NonCommercial 4.0 International License.
-https://creativecommons.org/licenses/by-nc/4.0/
+Creative Commons Attribution-ShareAlike 4.0 International License
+https://creativecommons.org/licenses/by-sa/4.0/
 
 
 ABOUT:
@@ -60,11 +60,10 @@ from copy import deepcopy
 import csv
 import os
 from typing import Union, Optional
-import unittest
 
-import alignStreams
-import harmonicFunction
-
+from . import alignStreams
+from . import harmonicFunction
+from . import import_SV
 
 # ------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------
@@ -267,7 +266,7 @@ class ScoreAndAnalysis:
     """
 
     def __init__(self,
-                 scoreOrData: Union[stream.Score, str],
+                 scoreOrData: Union[stream.Score, str, os.PathLike],
                  analysisLocation: Union[stream.Score, stream.Part, str] = 'On score',
                  analysisParts: int = 1,
                  analysisPartNo: int = -1,
@@ -319,17 +318,17 @@ class ScoreAndAnalysis:
             self.score = self.scoreOrData
             self._scoreInit()
 
-        elif isinstance(self.scoreOrData, str):
+        elif isinstance(self.scoreOrData, (str, os.PathLike)):
             self.name, extension = os.path.splitext(self.scoreOrData)
 
             if extension in ['.tsv', '.csv']:
                 if self.analysisLocation == 'On score':
                     raise ValueError('Cannot use tabular input (no score) with analysis on score.')
                 if extension == '.tsv':
-                    splitMarker = '\t'
+                    split_marker = '\t'
                 else:  # extension == '.csv':
-                    splitMarker = ','
-                self.score = _importSV(self.scoreOrData, splitMarker=splitMarker)
+                    split_marker = ','
+                self.score = import_SV(self.scoreOrData, split_marker=split_marker)
                 if self.score[0][0] != '0.0':  # First offset always 0. If not, header row
                     self.score = self.score[1:]  # Ignore header row
                 self._retrieveSlicesFromList()  # NOTE: sets totalLength and scoreMeasures
@@ -363,22 +362,28 @@ class ScoreAndAnalysis:
             as lyrics on a score.
         """
 
-        if type(self.analysisLocation) is stream.Score:
+        if isinstance(self.analysisLocation, stream.Score):
             self.analysis = self.analysisLocation.parts[0]
             # TODO validity checks on analysis (e.g. at least one Roman numeral)
             self._getSeparateAnalysis()
-        elif type(self.analysisLocation) is str:
+        elif isinstance(self.analysisLocation, (str, os.PathLike)):
             if self.analysisLocation == 'On score':
                 self._getOnScoreAnalysis()
             else:  # analysisLocation must be a path to a Roman text file
-                if os.path.splitext(self.analysisLocation)[1] not in ['.txt', '.rntxt']:
-                    msg = "The 'analysisLocation' argument must point to one of " \
-                          'the path (str) to a Roman text file (with extension .txt or .rntxt); ' \
-                          'such a file already parsed by music21; or ' \
-                          "the string 'On score' that it's on the score already (default)."
-                    raise ValueError(msg)
+                if os.path.isdir(self.analysisLocation):
+                    self.analysisLocation /= 'analysis.txt'
+                elif os.path.isfile(self.analysisLocation):
+                    if not self.analysisLocation.endswith('txt'):
+                        print(self.analysisLocation)
+                        msg = "When the `analysisLocation` argument points to a file path, " \
+                              "that file must have the extension `.txt` or `.rntxt`."
+                        raise ValueError(msg)
                 self.analysis = converter.parse(self.analysisLocation, format='Romantext').parts[0]
                 self._getSeparateAnalysis()
+        else:
+            raise TypeError(f'The `analysisLocation` argument (currently {self.analysisLocation} '
+                            'must be a music21 stream.Score() or '
+                            'a path to a valid file.')
 
     def writeScoreWithAnalysis(self,
                                outPath: str = '.',
@@ -418,8 +423,8 @@ class ScoreAndAnalysis:
             analysis.partName = 'Analysis'
 
             reference = self.scoreWithAnalysis.parts[0].template()
-            analysis = alignStreams.matchParts(referencePart=reference,
-                                               partToAdjust=analysis)
+            analysis = alignStreams.matchParts(reference_part=reference,
+                                               part_to_adjust=analysis)
 
             for n in analysis.recurse().notes:
                 if n.lyric:
@@ -723,8 +728,13 @@ class ScoreAndAnalysis:
         'sus' with '[addX]' for suspensions/added notes.
         """
 
-        if '//' in lyric:  # Sic. Single '/' for applied chords; double '//' for alt. and pivot
-            lyric = lyric.split('//')[-1]
+        splitter_pairs = [('//', 1),  # Single '/' = applied chord; double '//' for alt. and pivot
+                          ("\n", 0)  # case of two-line lyric as in RN + "\n"+ FN.
+                          ]
+
+        for this_string, this_position in splitter_pairs:
+            if this_string in lyric:
+                lyric = lyric.split(this_string)[this_position]
 
         replaceDict = {
             ' ': '',
@@ -1208,6 +1218,8 @@ class ScoreAndAnalysis:
         """
         te = expressions.TextExpression(message)  # NB: Have to make a new one each time
         te.placement = 'above'
+        te.style.color = 'red'
+        # Known issue: ^ This works within musicXML but readers like MuseScore don't show it.
         p = self.scoreWithAnalysis.parts[-1]
         m = p.measure(hr.startMeasure)
         mOffset = m.getOffsetInHierarchy(p)
@@ -1229,22 +1241,6 @@ def _intBeat(beat):
         return round(float(beat), 2)
 
 
-def _importSV(pathToFile: str,
-              splitMarker: str = '\t'):
-    """
-    Imports TSV file data for further processing.
-    """
-
-    with open(pathToFile, 'r') as f:
-        data = []
-        for row_num, line in enumerate(f):
-            values = line.strip().split(splitMarker)
-            data.append([v.strip('\"') for v in values])
-    f.close()
-
-    return data
-
-
 def rareRn(rn: roman.RomanNumeral):
     """
     Returns True for rare Roman numerals that will parse ok but are unusual in analyses.
@@ -1263,97 +1259,3 @@ def rareRn(rn: roman.RomanNumeral):
         return False
 
     return True
-
-
-# ------------------------------------------------------------------------------
-# ------------------------------------------------------------------------------
-
-class Test(unittest.TestCase):
-    """
-    Test the three main use cases:
-        score and analysis input separately;
-        score with analysis on score;
-        tab in (analysis separate)
-    """
-
-    def testScoreInAnalysisSeparate(self):
-        """
-        Score and analysis as separate files, both pre-parsed.
-        """
-
-        corpus = 'Etudes_and_Preludes'
-        composer = 'Bach,_Johann_Sebastian'
-        collection = 'The_Well-Tempered_Clavier_I'
-        piece = '1'
-
-        basePath = os.path.join('..', 'Corpus', corpus, composer, collection, piece)
-        score = converter.parse(os.path.join(basePath, 'score.mxl'))
-        analysis = converter.parse(os.path.join(basePath, 'analysis.txt'), format='romantext')
-        testSeparate = ScoreAndAnalysis(score,
-                                        analysis,
-                                        tolerance=80)  # Tests setting a high bar
-        testSeparate.runComparisons()
-
-        self.assertEqual(testSeparate.totalPitchFeedback, 2)
-        self.assertEqual(testSeparate.harmonicRanges[27].pitchFeedbackMessage[:28],
-                         'Measure 28, beat 1, viio42/v')
-        self.assertEqual(testSeparate.totalBassFeedback, 2)  # The same moments
-        self.assertEqual(testSeparate.totalMetricalFeedback, 0)
-
-    # ------------------------------------------------------------------------------
-
-    def testScoreInWithAnalysis(self):
-        """
-        Score and analysis in same file, parsed here from the file path.
-        """
-
-        corpus = 'OpenScore-LiederCorpus'
-        composer = 'Schubert,_Franz'
-        collection = 'Schwanengesang,_D.957'
-        piece = '02_Kriegers_Ahnung'
-
-        basePath = os.path.join('..', 'Corpus', corpus, composer, collection, piece)
-
-        onScoreTest = ScoreAndAnalysis(os.path.join(basePath, 'analysis_on_score.mxl'),
-                                       analysisLocation='On score',
-                                       analysisParts=1,
-                                       minBeatStrength=0.25,
-                                       tolerance=60)  # default value
-
-        onScoreTest.runComparisons()
-        self.assertEqual(onScoreTest.totalPitchFeedback, 0)
-        self.assertEqual(onScoreTest.totalBassFeedback, 0)
-        self.assertEqual(onScoreTest.totalRareRnFeedback, 0)
-        self.assertEqual(onScoreTest.totalMetricalFeedback, 4)
-
-    # ------------------------------------------------------------------------------
-
-    def testTabIn(self):
-        """
-        Score and analysis in separate files, with the score represented in tabular format.
-        """
-
-        corpus = 'OpenScore-LiederCorpus'
-        composer = 'Hensel,_Fanny_(Mendelssohn)'
-        collection = '5_Lieder,_Op.10'
-        piece = '1_Nach_Süden'
-
-        basePath = os.path.join('..', 'Corpus', corpus, composer, collection, piece)
-
-        testTab = ScoreAndAnalysis(os.path.join(basePath, 'slices.tsv'),
-                                   analysisLocation=os.path.join(basePath, 'analysis.txt'),
-                                   tolerance=70)
-        testTab.runComparisons()
-
-        self.assertEqual(testTab.totalPitchFeedback, 3)
-        self.assertEqual(testTab.harmonicRanges[22].pitchFeedbackMessage[:29],
-                         'Measure 11, beat 3, viio6/V i')
-
-        self.assertEqual(testTab.totalBassFeedback, 8)
-        self.assertEqual(testTab.totalMetricalFeedback, 4)
-
-
-# ------------------------------------------------------------------------------
-
-if __name__ == '__main__':
-    unittest.main()

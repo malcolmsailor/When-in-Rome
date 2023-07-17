@@ -1,7 +1,7 @@
-Composer: Beethoven
-Title: String quartet Op. 18 No. 3, Movement 1
-Analyst: Neuwirth et al. ABC dataset. See https://github.com/DCMLab/ABC
-Proofreader: 
+Composer: Beethoven, Ludwig van
+Title: n03op18-3_01
+Analyst: DCML members and contributors. Licence CC-BY-NC-SA. This file is automatically converted from https://raw.githubusercontent.com/DCMLab/ABC/harmonies/n03op18-3_01.tsv
+Proofreader: Please refer to that source repository for full details.
 
 Time Signature: 2/2
 m1 D: I
@@ -97,7 +97,8 @@ m104 I
 m105 G: i6
 m106 V/IV
 m107 IV
-m108 D: V7 d: V7
+m108a D: V7
+m108b d: V7
 m110 i
 m111 V43
 m112 i6
